@@ -16,7 +16,8 @@ import playformCompress from "@playform/compress";
 // https://astro.build/config
 export default defineConfig({
   compressHTML: true,
-  site: "https://example.com",
+  site: 'https://oliveirarleo.github.io',
+  base: 'docs',
   integrations: [mdx(), sitemap(), playformCompress()],
   markdown: {
     shikiConfig: {
