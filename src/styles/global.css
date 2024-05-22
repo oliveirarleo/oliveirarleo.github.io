@@ -120,7 +120,9 @@ code {
   border-radius: 2px;
 }
 pre {
-  padding: 1.5em;
+  padding-right: 1.5em;
+  padding-top: 1.5em;
+  padding-bottom: 1.5em;
   border-radius: 8px;
   font-family: "RecVar";
   font-variation-settings: "slnt" 0, "CASL" 0, "CRSV" 0.5, "MONO" 1;
@@ -166,7 +168,7 @@ hr {
 }
 
 .line {
-  display: inline;
+  display: inline-block;
   padding-bottom: 0;
 }
 
@@ -180,8 +182,6 @@ hr {
 }
 
 .diff {
-  position: relative;
-  display: inline-block;
   margin: 0 -1.4em;
   padding: 0 1.4em;
   width: 100%;
@@ -191,26 +191,13 @@ hr {
   background-color: #10b98129;
 }
 
-.diff.add::before {
-  position: absolute;
-  left: 10px;
-  content: "+ ";
-}
-
 .diff.remove {
   background-color: #f43f5e29;
-}
-
-.diff.remove::before {
-  position: absolute;
-  left: 10px;
-  content: "- ";
 }
 
 .highlighted-word {
   all: unset;
   display: inline-block;
-  position: relative;
   margin-inline: 0.025rem;
   padding-inline: 0.2rem;
   border: solid;
@@ -242,4 +229,24 @@ hr {
   filter: blur(0.095rem);
   opacity: 0.4;
   transition: filter 0.35s, opacity 0.35s;
+}
+
+pre {
+  counter-reset: step;
+}
+
+pre .line::before {
+  padding-left: 1rem;
+  left: 0px;
+  content: counter(step);
+  counter-increment: step;
+  margin-right: 1.0rem;
+  display: inline-block;
+  text-align: right;
+  color: rgba($text-color-light, 40%);
+}
+
+pre .line:last-child {
+  content: '';
+  display: none;
 }
