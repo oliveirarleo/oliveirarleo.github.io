@@ -1,8 +1,6 @@
 import mdx from "@astrojs/mdx";
 import { defineConfig } from "astro/config";
-
 import sitemap from "@astrojs/sitemap";
-
 import {
   transformerMetaHighlight,
   transformerMetaWordHighlight,
@@ -13,10 +11,13 @@ import {
   transformerNotationWordHighlight,
 } from "@shikijs/transformers";
 
+import playformCompress from "@playform/compress";
+
 // https://astro.build/config
 export default defineConfig({
+  compressHTML: true,
   site: "https://example.com",
-  integrations: [mdx(), sitemap()],
+  integrations: [mdx(), sitemap(), playformCompress()],
   markdown: {
     shikiConfig: {
       // https://shiki.style/themes
