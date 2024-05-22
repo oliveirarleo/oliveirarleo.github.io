@@ -23,6 +23,9 @@ importers:
       '@biomejs/biome':
         specifier: ^1.7.3
         version: 1.7.3
+      '@shikijs/transformers':
+        specifier: ^1.6.0
+        version: 1.6.0
       astro:
         specifier: ^4.8.6
         version: 4.8.6(typescript@5.4.5)
@@ -774,6 +777,9 @@ packages:
 
   '@shikijs/core@1.6.0':
     resolution: {integrity: sha512-NIEAi5U5R7BLkbW1pG/ZKu3eb1lzc3/+jD0lFsuxMT7zjaf9bbNwdNyMr7zh/Zl8EXQtQ+MYBAt5G+JLu+5DlA==}
+
+  '@shikijs/transformers@1.6.0':
+    resolution: {integrity: sha512-qGfHe1ECiqfE2STPWvfogIj/9Q0SK+MCRJdoITkW7AmFuB7DmbFnBT2US84+zklJOB51MzNO8RUXZiauWssJlQ==}
 
   '@types/acorn@4.0.6':
     resolution: {integrity: sha512-veQTnWP+1D/xbxVrPC3zHnCZRjSrKfhbMUlEA43iMZLu7EsnTtkJklIuwrCPbOi8YkvDQAiW05VQQFvvz9oieQ==}
@@ -2965,6 +2971,10 @@ snapshots:
     optional: true
 
   '@shikijs/core@1.6.0': {}
+
+  '@shikijs/transformers@1.6.0':
+    dependencies:
+      shiki: 1.6.0
 
   '@types/acorn@4.0.6':
     dependencies:
