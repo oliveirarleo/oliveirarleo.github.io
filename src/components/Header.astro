@@ -27,7 +27,10 @@ import ThemeSwitch from "./ThemeSwitch.astro";
           >
         </a>
       </div>
-      <button onclick="handleToggleClick();">
+      <button
+        title="toggle light and dark theme"
+        onclick="handleToggleClick();"
+      >
         <svg
           xmlns="http://www.w3.org/2000/svg"
           height="32px"
@@ -75,32 +78,36 @@ import ThemeSwitch from "./ThemeSwitch.astro";
       padding: 1em 0.5em;
     }
     nav a {
-      padding: 0.5rem 0.75rem;
       color: var(--foreground);
-      border-bottom: 4px solid transparent;
       text-decoration: none;
-      border-radius: 1rem;
     }
     nav .internal-links {
       display: inline-flex;
       flex-flow: row wrap;
       justify-content: center;
+      gap: 1rem;
     }
     nav .internal-links a {
-      padding: 0.5rem 0.75rem;
-      border-bottom: 4px solid transparent;
+      padding: 0.2rem 0.75rem;
       text-decoration: none;
-      border-radius: 1rem;
+      border-radius: 0.8rem;
+      transition: all 150ms ease 0s;
     }
     nav .internal-links a.active {
       text-decoration: none;
-      border-bottom-color: var(--accent);
     }
     nav .internal-links a:hover {
+      transform: scale(1.05) translate3d(0px, 0px, 0px) perspective(1px);
       background-color: var(--accent);
       color: rgb(var(--background));
-      border-bottom-color: rgba(var(--gray-light), 50%);
+      /* color: var(--accent); */
     }
+    nav .internal-links a:active {
+      transform: scale(1) translate3d(0px, 0px, 0px) perspective(1px);
+      background-color: var(--accent);
+      color: rgb(var(--background));
+    }
+
     .right-icons {
       display: flex;
     }
@@ -108,6 +115,7 @@ import ThemeSwitch from "./ThemeSwitch.astro";
     .social-links,
     .social-links a {
       display: flex;
+      padding: 0.5rem;
       align-items: center;
     }
     @media (max-width: 720px) {

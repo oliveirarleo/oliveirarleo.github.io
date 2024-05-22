@@ -95,6 +95,9 @@ const posts = (await getCollection("tech")).sort(
               <li>
                 <a href={`/tech/${post.slug}/`}>
                   <img
+                    transition:name={post.id}
+                    transition:animate="initial"
+                    fetchpriority="low"
                     width={720}
                     height={360}
                     src={post.data.heroImage}

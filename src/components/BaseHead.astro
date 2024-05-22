@@ -3,6 +3,8 @@
 // all pages through the use of the <BaseHead /> component.
 import "../styles/global.css";
 
+import { ViewTransitions } from "astro:transitions";
+
 interface Props {
   title: string;
   description: string;
@@ -20,6 +22,8 @@ const { title, description, image = "/blog-placeholder-1.jpg" } = Astro.props;
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 <meta name="generator" content={Astro.generator} />
 
+<ViewTransitions />
+
 <!-- Font preloads -->
 <link
   rel="preload"
@@ -29,7 +33,6 @@ const { title, description, image = "/blog-placeholder-1.jpg" } = Astro.props;
   crossorigin
 />
 <link
-  rel="preload"
   href="/fonts/recursive-latin-1.woff2"
   as="font"
   type="font/woff"
