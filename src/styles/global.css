@@ -240,13 +240,17 @@ pre .line::before {
   left: 0px;
   content: counter(step);
   counter-increment: step;
-  margin-right: 1.0rem;
+  margin-right: 1rem;
   display: inline-block;
   text-align: right;
   color: rgba($text-color-light, 40%);
 }
 
 pre .line:last-child {
-  content: '';
+  content: "";
   display: none;
+}
+
+pre:has(code) {
+  position: relative;
 }

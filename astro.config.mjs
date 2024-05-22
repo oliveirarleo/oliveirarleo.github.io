@@ -11,7 +11,7 @@ import {
   transformerNotationFocus,
   transformerMetaHighlight,
   transformerMetaWordHighlight,
-} from '@shikijs/transformers'
+} from "@shikijs/transformers";
 
 // https://astro.build/config
 export default defineConfig({
@@ -20,14 +20,14 @@ export default defineConfig({
   markdown: {
     shikiConfig: {
       // https://shiki.style/themes
-      theme: 'github-dark',
+      theme: "github-dark",
       // https://shiki.style/languages
-      langs: ['typescript', 'elixir'],
+      langs: ["typescript", "elixir"],
       wrap: false,
       // Add custom transformers: https://shiki.style/guide/transformers
       // Find common transformers: https://shiki.style/packages/transformers
       transformers: [
-        transformerNotationDiff(), 
+        transformerNotationDiff(),
         transformerNotationHighlight(),
         transformerNotationFocus(),
         transformerNotationErrorLevel(),
