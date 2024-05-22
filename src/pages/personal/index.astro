@@ -7,7 +7,7 @@ import Header from "../../components/Header.astro";
 import { SITE_DESCRIPTION, SITE_TITLE } from "../../consts";
 
 const posts = (await getCollection("personal")).sort(
-  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf(),
+  (a, b) => b.data.pubDate.valueOf() - a.data.pubDate.valueOf()
 );
 ---
 
@@ -54,7 +54,7 @@ const posts = (await getCollection("personal")).sort(
       }
       .title {
         margin: 0;
-        color: rgb(var(--black));
+        color: rgb(var(--foreground));
         line-height: 1;
       }
       .date {
@@ -94,7 +94,12 @@ const posts = (await getCollection("personal")).sort(
             posts.map((post) => (
               <li>
                 <a href={`/personal/${post.slug}/`}>
-                  <img width={720} height={360} src={post.data.heroImage} alt="" />
+                  <img
+                    width={720}
+                    height={360}
+                    src={post.data.heroImage}
+                    alt=""
+                  />
                   <h4 class="title">{post.data.title}</h4>
                   <p class="date">
                     <FormattedDate date={post.data.pubDate} />

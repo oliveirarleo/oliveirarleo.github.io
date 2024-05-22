@@ -6,12 +6,54 @@
 
 :root {
   --accent: #015293;
-  --accent-dark: #99bad4;
-  --black: 15, 18, 25;
+  --background: 255, 255, 255;
+  --foreground: 15, 18, 25;
+  --highlight: #ffffff17;
+  --highlight-border: #545454;
+  --success: #10b98129;
+  --warning: #eab30829;
+  --error: #f43f5e29;
   --gray: 96, 115, 159;
   --gray-light: 229, 233, 240;
   --gray-dark: 34, 41, 57;
-  --gray-gradient: rgba(var(--gray-light), 50%), #fff;
+  --gray-gradient: rgba(var(--gray-light), 50%), rgb(var(--background));
+  --box-shadow: 0 2px 6px rgba(var(--gray), 25%),
+    0 8px 24px rgba(var(--gray), 33%), 0 16px 32px rgba(var(--gray), 33%);
+}
+
+/* @media (prefers-color-scheme: dark) {
+  :root {
+    --accent: #84bae6;
+    --background: 15, 18, 25;
+    --foreground: 255, 255, 255;
+    --highlight: #ffffff17;
+    --highlight-border: #545454;
+    --success: #10b98129;
+    --warning: #eab30829;
+    --error: #f43f5e29;
+    --gray: 181, 193, 203;
+    --gray-light: 40, 40, 40;
+    --gray-dark: 241, 243, 247;
+    --gray-gradient: rgba(var(--gray-light), 50%) 0%,
+      rgb(var(--background)) 100%;
+    --box-shadow: 0 2px 6px rgba(var(--gray), 25%),
+      0 8px 24px rgba(var(--gray), 33%), 0 16px 32px rgba(var(--gray), 33%);
+  }
+} */
+
+html.dark {
+  --accent: #84bae6;
+  --background: 15, 18, 25;
+  --foreground: 255, 255, 255;
+  --highlight: #ffffff17;
+  --highlight-border: #545454;
+  --success: #10b98129;
+  --warning: #eab30829;
+  --error: #f43f5e29;
+  --gray: 181, 193, 203;
+  --gray-light: 40, 40, 40;
+  --gray-dark: 241, 243, 247;
+  --gray-gradient: rgba(var(--gray-light), 50%) 0%, rgb(var(--background)) 100%;
   --box-shadow: 0 2px 6px rgba(var(--gray), 25%),
     0 8px 24px rgba(var(--gray), 33%), 0 16px 32px rgba(var(--gray), 33%);
 }
@@ -43,8 +85,14 @@ body {
   margin: 0;
   padding: 0;
   text-align: left;
-  background: linear-gradient(var(--gray-gradient)) no-repeat;
+  background: linear-gradient(
+      to bottom,
+      rgb(var(--gray-light)) 0%,
+      rgb(var(--background)) 100%
+    ),
+    rgb(var(--background));
   background-size: 100% 600px;
+  background-repeat: no-repeat;
   word-wrap: break-word;
   overflow-wrap: break-word;
   color: rgb(var(--gray-dark));
@@ -64,7 +112,7 @@ h4,
 h5,
 h6 {
   margin: 0 0 0.5rem 0;
-  color: rgb(var(--black));
+  color: rgb(var(--foreground));
   line-height: 1.2;
 }
 h1 {
@@ -176,7 +224,7 @@ hr {
   padding: 0 1.4em;
   width: 100%;
   display: inline-block;
-  background-color: #404040;
+  background-color: var(--highlight);
 }
 
 .diff {
@@ -186,11 +234,11 @@ hr {
 }
 
 .diff.add {
-  background-color: #10b98129;
+  background-color: var(--success);
 }
 
 .diff.remove {
-  background-color: #f43f5e29;
+  background-color: var(--error);
 }
 
 .highlighted-word {
@@ -199,18 +247,18 @@ hr {
   margin-inline: 0.025rem;
   padding-inline: 0.2rem;
   border: solid;
-  border-color: #545454;
+  border-color: var(--highlight-border);
   border-radius: 0.2rem;
-  background: #ffffff17;
+  background: var(--highlight);
   background-clip: padding-box;
 }
 
 .error {
-  background: #f43f5e29;
+  background: var(--error);
 }
 
 .warning {
-  background: #eab30829;
+  background: var(--warning);
 }
 
 .has-focused:hover .line:not(.has-focus) {

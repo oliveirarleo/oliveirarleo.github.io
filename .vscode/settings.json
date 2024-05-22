@@ -1,0 +1,6 @@
+{
+    "languageToolLinter.languageTool.ignoredWordsInWorkspace": [
+        "heroimage",
+        "pubdate"
+    ]
+}

@@ -2,7 +2,8 @@
   "recommendations": [
     "astro-build.astro-vscode",
     "unifiedjs.vscode-mdx",
-    "biomejs.biome"
+    "biomejs.biome",
+    "davidlday.languagetool-linter"
   ],
   "unwantedRecommendations": []
 }
