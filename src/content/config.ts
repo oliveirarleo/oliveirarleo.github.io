@@ -13,4 +13,4 @@ const blog = defineCollection({
   }),
 });
 
-export const collections = { blog };
+export const collections = { tech: blog, personal: blog };
