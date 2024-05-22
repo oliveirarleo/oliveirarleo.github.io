@@ -45,16 +45,29 @@ import HeaderLink from "./HeaderLink.astro";
     display: flex;
     align-items: center;
     justify-content: space-between;
+    padding: 1em 0.5em;
   }
   nav a {
-    padding: 1em 0.5em;
+    padding: 0.5rem 0.75rem;
     color: var(--black);
     border-bottom: 4px solid transparent;
     text-decoration: none;
+    border-radius: 1rem;
   }
-  nav a.active {
+  nav .internal-links a {
+    padding: 0.5rem 0.75rem;
+    border-bottom: 4px solid transparent;
+    text-decoration: none;
+    border-radius: 1rem;
+  }
+  nav .internal-links a.active {
     text-decoration: none;
     border-bottom-color: var(--accent);
+  }
+  nav .internal-links a:hover {
+    background-color: var(--accent);
+    color: whitesmoke;
+    border-bottom-color: rgba(var(--gray-light), 50%);
   }
   .social-links,
   .social-links a {
