@@ -17,7 +17,6 @@ import playformCompress from "@playform/compress";
 export default defineConfig({
   compressHTML: true,
   site: 'https://oliveirarleo.github.io',
-  base: 'docs',
   integrations: [mdx(), sitemap(), playformCompress()],
   markdown: {
     shikiConfig: {
