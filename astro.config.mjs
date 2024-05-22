@@ -23,7 +23,7 @@ export default defineConfig({
       theme: "github-dark",
       // https://shiki.style/languages
       langs: ["typescript", "elixir"],
-      wrap: false,
+      wrap: true,
       // Add custom transformers: https://shiki.style/guide/transformers
       // Find common transformers: https://shiki.style/packages/transformers
       transformers: [

@@ -120,9 +120,7 @@ code {
   border-radius: 2px;
 }
 pre {
-  padding-right: 1.5em;
-  padding-top: 1.5em;
-  padding-bottom: 1.5em;
+  padding: 1.5em;
   border-radius: 8px;
   font-family: "RecVar";
   font-variation-settings: "slnt" 0, "CASL" 0, "CRSV" 0.5, "MONO" 1;
@@ -229,21 +227,6 @@ hr {
   filter: blur(0.095rem);
   opacity: 0.4;
   transition: filter 0.35s, opacity 0.35s;
-}
-
-pre {
-  counter-reset: step;
-}
-
-pre .line::before {
-  padding-left: 1rem;
-  left: 0px;
-  content: counter(step);
-  counter-increment: step;
-  margin-right: 1rem;
-  display: inline-block;
-  text-align: right;
-  color: rgba($text-color-light, 40%);
 }
 
 pre .line:last-child {
