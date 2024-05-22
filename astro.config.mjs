@@ -4,13 +4,13 @@ import { defineConfig } from "astro/config";
 import sitemap from "@astrojs/sitemap";
 
 import {
-  transformerNotationDiff,
-  transformerNotationHighlight,
-  transformerNotationWordHighlight,
-  transformerNotationErrorLevel,
-  transformerNotationFocus,
   transformerMetaHighlight,
   transformerMetaWordHighlight,
+  transformerNotationDiff,
+  transformerNotationErrorLevel,
+  transformerNotationFocus,
+  transformerNotationHighlight,
+  transformerNotationWordHighlight,
 } from "@shikijs/transformers";
 
 // https://astro.build/config
