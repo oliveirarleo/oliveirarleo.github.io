@@ -2,13 +2,13 @@
 title: 'A blog in 1 day'
 description: 'A meta-tutorial to justify this blog'
 pubDate: 'May 19, 2024'
-heroImage: '/images/blog.webp'
+heroImage: '../../images/ablog/hero.webp'
 ---
 
 Lately I've been wanting
 How I created a blog in 3 days, but with this information, you simply might do it in one.
 
-## Blog features
+### Blog features
 
 The first thing that I like to do before any project is to annotate what are the minimum
 requirements that the project needs. For me, those are the ones I wanted for my blog:
@@ -29,7 +29,7 @@ Although comments could be nice, I think it's double-edged in terms of advantage
 complicated thing to implement. I intend to publish my posts on other websites as well,
 so any comments there are welcome.
 
-## Implementation decisions
+### Implementation decisions
 
 I think that for a dev like me, a [SSG](https://en.wikipedia.org/wiki/Static_site_generator)
 website hosted on GH pages is very nice. It's free and has all the infrastructure that GH
@@ -38,7 +38,26 @@ or anything, besides, I want to be able to add some code in a blog post, and tha
 a pain to solve in any CMS, and at the end it would be the same results but with more
 effort.
 
-Trying to find a SSG website generator, I've found a few candidates for the job. There is 
-[Jekyll](https://jekyllrb.com/), [Gatsby](gatsbyjs.com), [Hugo](https://gohugo.io/)
+Trying to find an SSG website generator, I've found a few candidates for the job. There are tons
+of frameworks for that nowadays: [Jekyll](https://jekyllrb.com/), [Gatsby](gatsbyjs.com),
+[Hugo](https://gohugo.io/) and many others. Any of them would suffice, but I wanted to take
+a look on [Astro](astro.build).
+
+It's very simple to start a markdown blog with Astro. This post assumes that you already know
+how to use [node](https://nodejs.org/en) and [pnpm](https://pnpm.io/). If you don't, don't be
+afraid, simply install them on your machine using their docs and follow this on. Astro's docs
+already have [some info](https://docs.astro.build/en/tutorial/0-introduction/) on how to do
+this step by step.
+
+I will try to do a short summary to speed this up for you:
+
+```sh
+cd my-blog-dir
+pnpm create astro@latest
+```
+
+Then you
+![Selected options on Astro create command](../../images/ablog/astro_create.png)
+
 
 
