@@ -13,13 +13,18 @@ import {
 
 import playformCompress from "@playform/compress";
 import AstroPWA from "@vite-pwa/astro";
+import rehypeExternalLinks from "rehype-external-links";
 
 // https://astro.build/config
 export default defineConfig({
   compressHTML: true,
   site: "https://oliveirarleo.github.io",
   integrations: [
-    mdx(),
+    mdx({
+      rehypePlugins: [
+        [rehypeExternalLinks, { rel: ["noopener"], target: ["_blank"] }],
+      ],
+    }),
     sitemap(),
     playformCompress(),
     AstroPWA({
@@ -61,6 +66,7 @@ export default defineConfig({
     }),
   ],
   markdown: {
+    rehypePlugins: [rehypeExternalLinks],
     shikiConfig: {
       // https://shiki.style/themes
       theme: "github-dark",
