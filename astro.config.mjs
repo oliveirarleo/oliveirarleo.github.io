@@ -12,12 +12,54 @@ import {
 } from "@shikijs/transformers";
 
 import playformCompress from "@playform/compress";
+import AstroPWA from "@vite-pwa/astro";
 
 // https://astro.build/config
 export default defineConfig({
   compressHTML: true,
-  site: 'https://oliveirarleo.github.io',
-  integrations: [mdx(), sitemap(), playformCompress()],
+  site: "https://oliveirarleo.github.io",
+  integrations: [
+    mdx(),
+    sitemap(),
+    playformCompress(),
+    AstroPWA({
+      devOptions: {
+        enabled: true,
+      },
+      workbox: {
+        navigateFallback: "/",
+        globPatterns: ["**/*.{css,js,html,svg,png,ico,txt}"],
+      },
+      mode: "development",
+      base: "/",
+      scope: "/",
+      includeAssets: ["favicon.svg"],
+      registerType: "autoUpdate",
+      manifest: {
+        name: "BlogLeo",
+        short_name: "BlogLeo",
+        theme_color: "#015293",
+        icons: [
+          {
+            src: "pwa-192x192.png",
+            sizes: "192x192",
+            type: "image/png",
+          },
+          {
+            src: "pwa-512x512.png",
+            sizes: "512x512",
+            type: "image/png",
+          },
+          {
+            src: "pwa-512x512.png",
+            sizes: "512x512",
+            type: "image/png",
+            purpose: "any maskable",
+          },
+        ],
+      },
+    }),
+  ],
   markdown: {
     shikiConfig: {
       // https://shiki.style/themes

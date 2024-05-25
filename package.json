@@ -17,6 +17,7 @@
     "@biomejs/biome": "^1.7.3",
     "@playform/compress": "0.0.4",
     "@shikijs/transformers": "^1.6.0",
+    "@vite-pwa/astro": "^0.4.0",
     "astro": "^4.8.6",
     "typescript": "^5.4.5"
   }

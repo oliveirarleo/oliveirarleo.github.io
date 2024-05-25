@@ -20,6 +20,7 @@ const { title, description, image = "/blog-placeholder-1.jpg" } = Astro.props;
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width,initial-scale=1" />
 <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+<meta name="theme-color" content="#015293" />
 <meta name="generator" content={Astro.generator} />
 
 <ViewTransitions />
@@ -60,3 +61,5 @@ const { title, description, image = "/blog-placeholder-1.jpg" } = Astro.props;
 <meta property="twitter:title" content={title} />
 <meta property="twitter:description" content={description} />
 <meta property="twitter:image" content={new URL(image, Astro.url)} />
+
+<link rel="manifest" href="/manifest.webmanifest">
