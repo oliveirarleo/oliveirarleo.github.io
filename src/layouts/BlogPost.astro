@@ -62,7 +62,7 @@ const { id, title, description, pubDate, updatedDate, heroImage } = Astro.props;
           {
             heroImage && (
               <img
-                transition:name={id}
+                transition:name={`img-${id}`}
                 transition:animate="initial"
                 fetchpriority="low"
                 width={1020}
@@ -74,7 +74,11 @@ const { id, title, description, pubDate, updatedDate, heroImage } = Astro.props;
           }
         </div>
         <div class="prose">
-          <div class="title">
+          <div
+            class="title"
+            transition:name={`title-${id}`}
+            transition:animate="initial"
+          >
             <div class="date">
               <FormattedDate date={pubDate} />
               {

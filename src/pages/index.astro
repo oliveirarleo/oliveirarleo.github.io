@@ -110,7 +110,7 @@ const post = [
         <li>
           <a href={`/${post.collection}/${post.slug}/`}>
             <img
-              transition:name={post.id}
+              transition:name={`img-${post.id}`}
               transition:animate="initial"
               fetchpriority="low"
               width={720}
@@ -118,7 +118,13 @@ const post = [
               src={post.data.heroImage}
               alt=""
             />
-            <h4 class="title">{post.data.title}</h4>
+            <h4
+              class="title"
+              transition:name={`title-${post.id}`}
+              transition:animate="initial"
+            >
+              {post.data.title}
+            </h4>
             <p class="date">
               <FormattedDate date={post.data.pubDate} />
             </p>
