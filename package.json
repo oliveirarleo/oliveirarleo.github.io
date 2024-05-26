@@ -3,22 +3,25 @@
   "type": "module",
   "version": "1.0.0",
   "scripts": {
+    "test": "pnpm biome check . --apply",
     "dev": "astro dev",
     "start": "astro dev",
     "build": "astro check && astro build",
     "preview": "astro preview",
-    "astro": "astro"
+    "astro": "astro",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@astrojs/check": "^0.7.0",
-    "@astrojs/mdx": "^3.0.0",
+    "@astrojs/mdx": "^3.0.1",
     "@astrojs/rss": "^4.0.6",
-    "@astrojs/sitemap": "^3.1.4",
+    "@astrojs/sitemap": "^3.1.5",
     "@biomejs/biome": "^1.7.3",
-    "@playform/compress": "^0.0.6",
+    "@playform/compress": "^0.0.7",
     "@shikijs/transformers": "^1.6.0",
     "@vite-pwa/astro": "^0.4.0",
-    "astro": "^4.8.6",
+    "astro": "^4.9.1",
+    "husky": "^9.0.11",
     "rehype-external-links": "^3.0.0",
     "sharp": "^0.33.4",
     "typescript": "^5.4.5"
