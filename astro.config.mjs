@@ -18,7 +18,7 @@ import rehypeExternalLinks from "rehype-external-links";
 // https://astro.build/config
 export default defineConfig({
   compressHTML: true,
-  site: "https://oliveirarleo.github.io",
+  site: "https://oliveirarleo.com",
   integrations: [
     mdx({
       rehypePlugins: [
