@@ -5,14 +5,14 @@
  */
 
 :root {
-  --accent: #015293;
+  --accent: 1, 82, 147;
   --background: 255, 255, 255;
   --foreground: 15, 18, 25;
-  --highlight: #ffffff17;
-  --highlight-border: #545454;
-  --success: #10b98129;
-  --warning: #eab30829;
-  --error: #f43f5e29;
+  --highlight: 255, 255, 255, 17;
+  --highlight-border: 84, 84, 84;
+  --success: 16, 185, 129, 29%;
+  --warning: 234, 179, 8, 29%;
+  --error: 244, 63, 94, 29%;
   --gray: 96, 115, 159;
   --gray-light: 229, 233, 240;
   --gray-dark: 34, 41, 57;
@@ -21,35 +21,15 @@
     0 8px 24px rgba(var(--gray), 33%), 0 16px 32px rgba(var(--gray), 33%);
 }
 
-/* @media (prefers-color-scheme: dark) {
-  :root {
-    --accent: #84bae6;
-    --background: 15, 18, 25;
-    --foreground: 255, 255, 255;
-    --highlight: #ffffff17;
-    --highlight-border: #545454;
-    --success: #10b98129;
-    --warning: #eab30829;
-    --error: #f43f5e29;
-    --gray: 181, 193, 203;
-    --gray-light: 40, 40, 40;
-    --gray-dark: 241, 243, 247;
-    --gray-gradient: rgba(var(--gray-light), 50%) 0%,
-      rgb(var(--background)) 100%;
-    --box-shadow: 0 2px 6px rgba(var(--gray), 25%),
-      0 8px 24px rgba(var(--gray), 33%), 0 16px 32px rgba(var(--gray), 33%);
-  }
-} */
-
 html.dark {
-  --accent: #84bae6;
+  --accent: 132, 186, 230;
   --background: 15, 18, 25;
   --foreground: 255, 255, 255;
-  --highlight: #ffffff17;
-  --highlight-border: #545454;
-  --success: #10b98129;
-  --warning: #eab30829;
-  --error: #f43f5e29;
+  --highlight: 255, 255, 255, 17;
+  --highlight-border: 84, 84, 84;
+  --success: 16, 185, 129, 29%;
+  --warning: 234, 179, 8, 29%;
+  --error: 244, 63, 94, 29%;
   --gray: 181, 193, 203;
   --gray-light: 40, 40, 40;
   --gray-dark: 241, 243, 247;
@@ -135,10 +115,10 @@ b {
   font-weight: 700;
 }
 a {
-  color: var(--accent);
+  color: rgba(var(--accent));
 }
 a:hover {
-  color: var(--accent);
+  color: rgba(var(--accent));
 }
 p {
   margin-bottom: 1em;
@@ -177,7 +157,7 @@ pre > code {
   all: unset;
 }
 blockquote {
-  border-left: 4px solid var(--accent);
+  border-left: 4px solid rgba(var(--accent));
   padding: 0 0 0 20px;
   margin: 0px;
   font-size: 1.333em;
@@ -224,7 +204,7 @@ hr {
   padding: 0 1.4em;
   width: 100%;
   display: inline-block;
-  background-color: var(--highlight);
+  background-color: rgba(var(--highlight));
 }
 
 .diff {
@@ -234,11 +214,11 @@ hr {
 }
 
 .diff.add {
-  background-color: var(--success);
+  background-color: rgba(var(--success));
 }
 
 .diff.remove {
-  background-color: var(--error);
+  background-color: rgba(var(--error));
 }
 
 .highlighted-word {
@@ -247,18 +227,18 @@ hr {
   margin-inline: 0.025rem;
   padding-inline: 0.2rem;
   border: solid;
-  border-color: var(--highlight-border);
+  border-color: rgba(var(--highlight-border));
   border-radius: 0.2rem;
-  background: var(--highlight);
+  background: rgba(var(--highlight));
   background-clip: padding-box;
 }
 
 .error {
-  background: var(--error);
+  background: rgba(var(--error));
 }
 
 .warning {
-  background: var(--warning);
+  background: rgba(var(--warning));
 }
 
 .has-focused:hover .line:not(.has-focus) {
