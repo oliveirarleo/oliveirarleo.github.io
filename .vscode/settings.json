@@ -1,6 +1,9 @@
 {
     "languageToolLinter.languageTool.ignoredWordsInWorkspace": [
+        "astro",
         "heroimage",
-        "pubdate"
+        "oliveirarleo",
+        "pubdate",
+        "readme"
     ]
 }
