@@ -1,18 +1,24 @@
 ---
 title: 'A blog in 1 day'
-description: 'A meta-tutorial to justify this blog'
-pubDate: 'May 19, 2024'
-heroImage: '../../images/ablog/hero.webp'
+description: "A blog post about how I've written the code for this blog"
+pubDate: '2024-05-26'
+heroImage: '../../images/a_blog/hero.webp'
 ---
 
 Lately I've been wanting to get some stuff out of my head, and decided to have a personal
-blog. From time to time I will put here more and more posts about what I've been thinking
+blog. From time to time, I will put here more and more posts about what I've been thinking
 lately.
 
-Alongside that, I've always wanted to create a personal website hosted on Github pages,
+Alongside that, I've always wanted to create a personal website hosted on GitHub pages,
 and eventually post some ideas I want to share.
 
-How I created a blog in 3 days, but with this information, you simply might do it in one.
+How I created a blog in 4 days, but with this information, you simply might do it in one.
+Note that the temptation to lose time tinkering this blog is immense. I suggest you follow
+these guidelines and call it version 1, focus on the content, as I am doing the same from
+now on. You can always improve things in the long term.
+
+Astro's default is already nice, you can simply follow **"Blog features"**, **"Content"**
+and **"Deploy"**. The rest is up to you.
 
 ### Blog features
 
@@ -63,25 +69,193 @@ pnpm create astro@latest --template blog
 ```
 
 Choose the blog template option, then you can choose the others as you like.
-![Selected options on Astro create command](../../images/ablog/astro_create.png)
+![Selected options on Astro create command](../../images/a_blog/astro_create.png)
 
 #### Content
 
-Update readme, landing page and about page.
+Now it's time to update the automatic generated info from your blog. In my case I copied the
+Astro's files into the root folder, this way my text editor (VS Code) gets less angry about
+config.
 
-#### Static analysis
-
-#### Code snippets improvement
+Update `README.txt`, **landing page** and the **about page**. Those can be found at the
+`src/pages/` folder. Don't forget about the favicon as well, I've chosen to use some icons
+from [Google icons](https://fonts.google.com/icons) just so I don't lose too much time with
+this.
 
 ##### Index and about page
 
-##### Personal and tech blogs
+Some nice text for the about and landing page, some personal picture for the about page, and
+done!
 
-##### Fav icon
+I've also removed all external links except from the GitHub one. Soon I will add one for
+LinkedIn. There is one set of buttons in the footer and there is one set in the header.
 
 #### Automatic deployment / CI / CD
 
+To do some automatic deployment you have to make sure to have your `astro.config.mjs` file
+well configured:
+```ts
+export default defineConfig({
+  site: "https://oliveirarleo.github.io",
+  base: "."
+});
+```
+then implement a GitHub action on `.github/workflows/deploy.yml`. Take a look on
+[mine](https://github.com/oliveirarleo/oliveirarleo.github.io/blob/main/.github/workflows/deploy.yml)
+as an example.
+
+#### Personal and tech blogs
+
+In my case, I've duplicated the blog folder to separate my tech blog from the personal blog.
+
+```
+src/pages/blog/ // [!code --]
+src/pages/tech/ // [!code ++]
+src/pages/personal/ // [!code ++]
+src/content/blog/ // [!code --]
+src/content/tech/ // [!code ++]
+src/content/personal/ // [!code ++]
+```
+then doing a search for `/blog` in the files I could find some places I needed to update:
+- the header links at `src/components/Header.astro`
+- the rss feed at `src/pages/rss.xml.js`, I've updated to `.ts` and had to join the posts
+```ts
+const posts = await getCollection("blog")// [!code --]
+const posts = [// [!code ++]
+    ...(await getCollection("personal")),// [!code ++]
+    ...(await getCollection("tech")),// [!code ++]
+];// [!code ++]
+link: `/blog/${post.slug}/`,// [!code --]
+link: `/${post.collection}/${post.slug}/`,// [!code ++]
+```
+- same for `src/pages/personal/index.astro` and `src/pages/tech/index.astro`
+```ts
+const posts = await getCollection("blog")// [!code --]
+const posts = [ ... ]// [!code ++]
+```
+
+##### Custom post link for the landing page
+
+I wanted to add some blog post link in the first page. So for the moment I've decided
+to put the latest one:
+
+```ts
+const post = [
+  ...(await getCollection("personal")),
+  ...(await getCollection("tech")),
+].reduce((a, b) =>
+  a.data.pubDate.valueOf() > b.data.pubDate.valueOf() ? a : b
+);
+```
+
+#### Static analysis
+
+I wanted to take a look on [BiomeJS](https://biomejs.dev/) for static analysis and
+formatting. Looks like it works for the code inside Astro files, but it is still
+missing HTML support, so I've started using Astro's VS Code extension to format my
+files. It uses prettier or ESLint under the hood.
+
+This is how you can run its commands:
+```sh
+pnpm biome lint . // lint files
+pnpm biome format . --write // format files
+pnpm biome check . --apply // Runs formatter, linter and import sorting to the requested files.
+```
+If you want to take a look on my Biome config, you can check my
+[biome.json](https://github.com/oliveirarleo/oliveirarleo.github.io/blob/main/biome.json)
+file.
+
+At the end Biome has a very nice CLI, and it's very fast, but missing HTML support
+is pretty bad. On other projects, I missed the amount of plugins ESLint has as well.
+Who knows if there will be a bright future for this lib, next time I will go back
+to the slow-and-confusing but reliable prettier-eslint.
+
+#### Code snippets improvement
+
+Theming the code snippets with this blog was a breeze. [Shiki](shiki.style) Compressing
+out of the box, and what a nice lib!
+
+On your `astro.config.mjs` file, you can simply
+
+```ts
+shikiConfig: {
+    // https://shiki.style/themes
+    theme: "github-dark",
+    // https://shiki.style/languages
+    langs: [],
+}
+```
+It just works!
+
+There is a ton of transformers to use as well! Those are the ones I've decided to use:
+
+```ts
+// Add custom transformers: https://shiki.style/guide/transformers
+// Find common transformers: https://shiki.style/packages/transformers
+transformers: [
+    transformerNotationDiff(),
+    transformerNotationHighlight(),
+    transformerNotationFocus(),
+    transformerNotationErrorLevel(),
+    transformerNotationWordHighlight(),
+    transformerMetaHighlight(),
+    transformerMetaWordHighlight(),
+],
+```
+I've also taken a look at line numbers, but it's not as easy as those transformers.
+There is a [thread](https://github.com/shikijs/shiki/issues/3#issuecomment-830564854)
+discussing a solution with pure CSS to solve it. But at the end it uses the `:before`
+feature, which requires absolute positioning to look nice, but I don't like it. I
+much prefer to implement a separate column to put the numbers, like github uses on its
+code view.
+
+
+#### Menu
+
+I've also didn't like the menu too much, so I've updated it to not be the `inline-block`
+buttons. I much prefer smaller buttons. At the end I've opted to simple hover animation:
+```css
+nav .internal-links a {
+    transition: all 150ms ease 0s;
+}
+nav .internal-links a:hover {
+    transform: scale(1.05) translate3d(0px, 0px, 0px) perspective(1px);
+    background-color: var(--accent);
+    color: rgb(var(--background));
+}
+nav .internal-links a:active {
+    transform: scale(1) translate3d(0px, 0px, 0px) perspective(1px);
+    background-color: var(--accent);
+    color: rgb(var(--background));
+}
+``` 
+Looks nice!
+
 #### Light / dark themes and customization
+
+To implement this we will have to extend the css variables that are included.
+On `src/styles/global.css` I've included some new variables:
+
+```css
+:root {
+  --accent: #015293;
+  --accent-dark: #000d8a;
+  --background: 255, 255, 255;
+  --foreground: 15, 18, 25;
+  --highlight: #ffffff17;
+  --highlight-border: 84, 84, 84;
+  --success: 16, 185, 129, 41;
+  --warning: 234, 179, 8, 41;
+  --error: 244, 63, 94, 41;
+  --gray: 96, 115, 159;
+  --gray-light: 229, 233, 240;
+  --gray-dark: 34, 41, 57;
+  --gray-gradient: rgba(var(--gray-light), 50%), rgb(var(--background));
+  --box-shadow: 0 2px 6px rgba(var(--gray), 25%),
+    0 8px 24px rgba(var(--gray), 33%), 0 16px 32px rgba(var(--gray), 33%);
+}
+```
+
 
 [Contrast checker](https://coolors.co/contrast-checker/84bae6-000000)
 
@@ -96,7 +270,7 @@ Update readme, landing page and about page.
 
 #### Custom domain
 
-[Github domain tutorial](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site)
+[GitHub domain tutorial](https://docs.github.com/en/pages/configuring-a-custom-domain-for-your-github-pages-site/managing-a-custom-domain-for-your-github-pages-site)
 
 #### View transitions
 

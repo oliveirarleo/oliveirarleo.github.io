@@ -1,5 +1,4 @@
 import mdx from "@astrojs/mdx";
-import { defineConfig } from "astro/config";
 import sitemap from "@astrojs/sitemap";
 import {
   transformerMetaHighlight,
@@ -10,6 +9,7 @@ import {
   transformerNotationHighlight,
   transformerNotationWordHighlight,
 } from "@shikijs/transformers";
+import { defineConfig } from "astro/config";
 
 import playformCompress from "@playform/compress";
 import AstroPWA from "@vite-pwa/astro";
@@ -26,7 +26,6 @@ export default defineConfig({
       ],
     }),
     sitemap(),
-    playformCompress(),
     AstroPWA({
       devOptions: {
         enabled: true,
@@ -35,14 +34,14 @@ export default defineConfig({
         navigateFallback: "/",
         globPatterns: ["**/*.{css,js,html,svg,png,ico,txt}"],
       },
-      mode: "development",
+      mode: "production",
       base: "/",
       scope: "/",
       includeAssets: ["favicon.svg"],
       registerType: "autoUpdate",
       manifest: {
-        name: "BlogLeo",
-        short_name: "BlogLeo",
+        name: "OliveiraRLeo Blog",
+        short_name: "oliveirarleo",
         theme_color: "#015293",
         icons: [
           {
@@ -64,6 +63,7 @@ export default defineConfig({
         ],
       },
     }),
+    playformCompress(),
   ],
   markdown: {
     rehypePlugins: [rehypeExternalLinks],
@@ -71,7 +71,7 @@ export default defineConfig({
       // https://shiki.style/themes
       theme: "github-dark",
       // https://shiki.style/languages
-      langs: ["typescript", "elixir"],
+      langs: [],
       wrap: true,
       // Add custom transformers: https://shiki.style/guide/transformers
       // Find common transformers: https://shiki.style/packages/transformers

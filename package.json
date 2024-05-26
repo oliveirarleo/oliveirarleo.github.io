@@ -15,7 +15,7 @@
     "@astrojs/rss": "^4.0.6",
     "@astrojs/sitemap": "^3.1.4",
     "@biomejs/biome": "^1.7.3",
-    "@playform/compress": "0.0.4",
+    "@playform/compress": "^0.0.6",
     "@shikijs/transformers": "^1.6.0",
     "@vite-pwa/astro": "^0.4.0",
     "astro": "^4.8.6",

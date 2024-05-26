@@ -1,17 +1,17 @@
 ---
-import { getCollection } from "astro:content";
 import { Image } from "astro:assets";
+import { getCollection } from "astro:content";
 import BaseHead from "../components/BaseHead.astro";
 import Footer from "../components/Footer.astro";
-import Header from "../components/Header.astro";
 import FormattedDate from "../components/FormattedDate.astro";
+import Header from "../components/Header.astro";
 import { SITE_DESCRIPTION, SITE_TITLE } from "../consts";
 
 const post = [
   ...(await getCollection("personal")),
   ...(await getCollection("tech")),
 ].reduce((a, b) =>
-  a.data.pubDate.valueOf() > b.data.pubDate.valueOf() ? a : b
+  a.data.pubDate.valueOf() > b.data.pubDate.valueOf() ? a : b,
 );
 ---
 

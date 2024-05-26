@@ -3,7 +3,8 @@
     "astro-build.astro-vscode",
     "unifiedjs.vscode-mdx",
     "biomejs.biome",
-    "davidlday.languagetool-linter"
+    "davidlday.languagetool-linter",
+    "yoavbls.pretty-ts-errors"
   ],
   "unwantedRecommendations": []
 }
