@@ -200,7 +200,9 @@
   display: none;
 }
 .wishlist-page .turnstile-container {
+  max-width: 100%;
   margin: 16px 0 14px;
+  overflow: hidden;
 }
 .wishlist-page .author-card {
   border: 1px solid #e3e1d8;
@@ -558,13 +560,20 @@
 .wishlist-page .refresh-button {
   width: 30px;
   height: 30px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
   border: 1px solid #dedbd1;
   border-radius: 50%;
   background: transparent;
   color: #68736b;
   cursor: pointer;
-  font-size: 20px;
-  line-height: 1;
+}
+
+.wishlist-page .list-tools .refresh-button svg {
+  width: 15px;
+  height: 15px;
 }
 
 .wishlist-page .user-session {
@@ -770,7 +779,7 @@
     gap: 28px;
   }
   .wishlist-page .form-card {
-    padding: 54px 24px 27px;
+    padding: 54px 16px 27px;
   }
 }
 

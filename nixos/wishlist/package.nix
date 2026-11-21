@@ -12,7 +12,7 @@ buildNpmPackage {
   };
 
   inherit nodejs;
-  npmDepsHash = "sha256-BSGflWACwgxYFIPAZhRxDjVP/SO6G+2CuqjPHRfMz+8=";
+  npmDepsHash = "sha256-uRT0jlbAejoL2UA9eqKggfFSd3iwZ+8PGnnfb0YIH3s=";
   npmInstallFlags = [ "--omit=dev" "--ignore-scripts" ];
   dontNpmBuild = true;
 

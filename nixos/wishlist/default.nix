@@ -31,7 +31,7 @@ in
     port = lib.mkOption {
       type = lib.types.port;
       default = 8787;
-      description = "Port the API listens on.";
+      description = "Port the API listens on. Production defaults to 8787; local development uses 8788 from .dev.env.";
     };
 
     allowedOrigin = lib.mkOption {

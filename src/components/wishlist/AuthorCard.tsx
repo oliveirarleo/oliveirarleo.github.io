@@ -1,3 +1,4 @@
+import { Sparkles } from "lucide-solid";
 import { For } from "solid-js";
 import type { Wish } from "../../lib/wishlist-api";
 import WishItem from "./WishItem";
@@ -28,7 +29,7 @@ export default function AuthorCard(props: {
           </p>
         </div>
         <span class="author-sparkle" aria-hidden="true">
-          ✧
+          <Sparkles size={20} />
         </span>
       </header>
       <ul class="author-wishes">

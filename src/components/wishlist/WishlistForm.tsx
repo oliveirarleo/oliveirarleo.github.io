@@ -1,3 +1,4 @@
+import { ArrowRight, Link2 } from "lucide-solid";
 import { createSignal, Show } from "solid-js";
 import type { StoredUser } from "../../lib/user-secrets";
 import type { CreateWishInput } from "../../lib/wishlist-api";
@@ -100,14 +101,7 @@ export default function WishlistForm(props: {
 
       <label for="link">Gift link</label>
       <div class="link-input">
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path
-            d="m10 13.8 4-4m-6.5 7.7-1.2 1.2a3.8 3.8 0 0 1-5.4-5.4l4.6-4.6a3.8 3.8 0 0 1 5.4 0m5.6-2.2 1.2 1.2a3.8 3.8 0 0 1 5.4 5.4l-4.6 4.6a3.8 3.8 0 0 1-5.4 0"
-            stroke="currentColor"
-            stroke-width="1.7"
-            stroke-linecap="round"
-          />
-        </svg>
+        <Link2 size={16} aria-hidden="true" />
         <input
           id="link"
           name="link"
@@ -126,15 +120,7 @@ export default function WishlistForm(props: {
       />
       <button type="submit" disabled={submitting()}>
         <span>{submitting() ? "Adding…" : "Add my wish"}</span>
-        <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-          <path
-            d="M5 12h14m-5-5 5 5-5 5"
-            stroke="currentColor"
-            stroke-width="1.8"
-            stroke-linecap="round"
-            stroke-linejoin="round"
-          />
-        </svg>
+        <ArrowRight size={17} aria-hidden="true" />
       </button>
       <Show when={validationMessage()}>
         <p class="form-status error" role="status">

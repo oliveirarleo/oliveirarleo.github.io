@@ -45,6 +45,7 @@
     "drizzle-orm": "1.0.0-rc.6",
     "effect": "^4.1.4",
     "hono": "^4.13.19",
+    "lucide-solid": "^1.76.0",
     "pino": "^10.4.0",
     "solid-js": "1.9.20"
   }

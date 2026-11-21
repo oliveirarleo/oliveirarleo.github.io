@@ -24,7 +24,7 @@ dev:
     trap cleanup EXIT INT TERM
 
     ASTRO_DEV_BACKGROUND=1 \
-      PUBLIC_WISHLIST_API_URL="${PUBLIC_WISHLIST_API_URL:-http://localhost:8787}" \
+      PUBLIC_WISHLIST_API_URL="${PUBLIC_WISHLIST_API_URL:-http://localhost:8788}" \
       pnpm dev &
     pids+=("$!")
 

@@ -18,7 +18,7 @@ pnpm dev # run the Astro site on http://localhost:4321
 For the wishlist API, use a second terminal:
 
 ```sh
-pnpm dev:api # run the API on http://localhost:8787
+pnpm dev:api # run the API on http://localhost:8788
 ```
 
 Or run both together with `just`:
@@ -28,13 +28,16 @@ just dev
 ```
 
 `just dev` starts Astro at `http://localhost:4321/wishlist/` and the API at
-`http://localhost:8787`.
+`http://localhost:8788`.
+
+Development uses port `8788` while production listens on `8787`, so `just dev`
+can run alongside the systemd wishlist service without `EADDRINUSE`.
 
 Create a local `.env` based on `.env.example` and point the frontend at the
 local API:
 
 ```sh
-PUBLIC_WISHLIST_API_URL=http://localhost:8787
+PUBLIC_WISHLIST_API_URL=http://localhost:8788
 ```
 
 Turnstile is optional in development. Leave both `PUBLIC_TURNSTILE_SITE_KEY`
@@ -157,7 +160,7 @@ Backend:
 | Variable                 | Purpose                                                         |
 | ------------------------ | --------------------------------------------------------------- |
 | `HOST`                   | Bind address, default `127.0.0.1`                               |
-| `PORT`                   | Port, default `8787`                                            |
+| `PORT`                   | Port, default `8787`; local `.env` uses `8788`                  |
 | `DATABASE_PATH`          | SQLite path, default `./data/wishes.db` locally                 |
 | `ALLOWED_ORIGIN`         | Exact allowed browser origin                                    |
 | `TURNSTILE_SECRET`       | Turnstile secret from sops; required when `NODE_ENV=production` |

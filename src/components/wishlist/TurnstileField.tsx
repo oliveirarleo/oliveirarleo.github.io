@@ -54,19 +54,50 @@ export default function TurnstileField(props: {
   const [message, setMessage] = createSignal("");
   let container: HTMLDivElement | undefined;
   let widget: string | undefined;
+  let resizeObserver: ResizeObserver | undefined;
+  let mutationObserver: MutationObserver | undefined;
+  let lastWidth = -1;
+
+  // Turnstile's widget has a 300px minimum width and overflows narrower
+  // cards. Keep its normal 300x65 layout and scale it down to fit instead.
+  function fitWidget() {
+    if (!container) return;
+    const available = container.clientWidth;
+    if (!available || available === lastWidth) return;
+    const root = container.firstElementChild as HTMLElement | null;
+    if (!root) return;
+
+    lastWidth = available;
+    const scale = Math.min(1, available / 300);
+    root.style.transformOrigin = "top left";
+    root.style.transform = `scale(${scale})`;
+    container.style.height = `${65 * scale}px`;
+  }
+
+  function watchWidget() {
+    if (!container) return;
+    resizeObserver?.disconnect();
+    mutationObserver?.disconnect();
+    resizeObserver = new ResizeObserver(fitWidget);
+    resizeObserver.observe(container);
+    mutationObserver = new MutationObserver(fitWidget);
+    mutationObserver.observe(container, { childList: true, subtree: true });
+  }
 
   async function setup() {
     if (!props.siteKey || !container) return;
     setMessage("");
+    lastWidth = -1;
     try {
       await loadTurnstile();
       if (!container || !window.turnstile) return;
       widget = window.turnstile.render(container, {
         sitekey: props.siteKey,
         theme: "light",
-        size: "flexible",
+        size: "normal",
         action: "wishlist",
       });
+      watchWidget();
     } catch {
       setMessage(
         "Verification could not load. Check your connection and retry.",
@@ -81,7 +112,11 @@ export default function TurnstileField(props: {
 
   onMount(() => {
     void setup();
-    onCleanup(() => window.turnstile?.remove?.(widget));
+    onCleanup(() => {
+      resizeObserver?.disconnect();
+      mutationObserver?.disconnect();
+      window.turnstile?.remove?.(widget);
+    });
   });
 
   return (

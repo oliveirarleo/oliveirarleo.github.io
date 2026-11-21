@@ -1,3 +1,4 @@
+import { Gift, RefreshCw, Sparkles } from "lucide-solid";
 import { Show } from "solid-js";
 import UserSession from "./wishlist/UserSession";
 import { useWishlist } from "./wishlist/useWishlist";
@@ -34,7 +35,7 @@ export default function Wishlist(props: WishlistProps) {
               aria-label="Refresh wishes"
               title="Refresh wishes"
             >
-              ↻
+              <RefreshCw size={15} aria-hidden="true" />
             </button>
           </div>
         </div>
@@ -55,7 +56,9 @@ export default function Wishlist(props: WishlistProps) {
         </Show>
         <Show when={wishlist.loaded() && wishlist.wishes().length === 0}>
           <div class="empty-state">
-            <span aria-hidden="true">✧</span>
+            <span aria-hidden="true">
+              <Sparkles size={30} />
+            </span>
             <h3>No wishes just yet</h3>
             <p>Be the first to add a little something to the list.</p>
           </div>
@@ -64,23 +67,7 @@ export default function Wishlist(props: WishlistProps) {
 
       <div class="form-column">
         <div class="form-decoration" aria-hidden="true">
-          <svg viewBox="0 0 64 64" fill="none">
-            <title>Gift</title>
-            <path
-              d="M12 27h40v29H12zM8 19h48v12H8zM32 19v37"
-              stroke="currentColor"
-              stroke-width="2.2"
-            />
-            <path
-              d="M32 19c-7 0-14-2.4-14-8 0-3 2.4-5 5.4-5C28.7 6 32 19 32 19Zm0 0c7 0 14-2.4 14-8 0-3-2.4-5-5.4-5C35.3 6 32 19 32 19Z"
-              stroke="currentColor"
-              stroke-width="2.2"
-            />
-            <path
-              d="m53 4 1.2 3.8L58 9l-3.8 1.2L53 14l-1.2-3.8L48 9l3.8-1.2L53 4Z"
-              fill="currentColor"
-            />
-          </svg>
+          <Gift size={38} strokeWidth={1.7} />
         </div>
         <aside class="form-card" aria-labelledby="form-title">
           <p class="section-kicker">Make it merry</p>

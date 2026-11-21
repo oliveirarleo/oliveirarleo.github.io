@@ -24,6 +24,18 @@ const server = serve(
   },
 );
 
+server.on("error", (error: NodeJS.ErrnoException) => {
+  if (error.code === "EADDRINUSE") {
+    logger.error(
+      { port: config.PORT },
+      "Port is already in use. Stop the other API process or change PORT.",
+    );
+  } else {
+    logger.error({ err: error }, "Wishlist API server error");
+  }
+  process.exit(1);
+});
+
 function shutdown() {
   server.close(() => {
     client.close();
