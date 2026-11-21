@@ -78,11 +78,7 @@ const { id, title, description, pubDate, updatedDate, heroImage } = Astro.props;
           }
         </div>
         <div class="prose">
-          <div
-            class="title"
-            transition:name={`title-${id}`}
-            transition:animate="initial"
-          >
+          <div class="title">
             <div class="date">
               <FormattedDate date={pubDate} />
               {
@@ -93,7 +89,12 @@ const { id, title, description, pubDate, updatedDate, heroImage } = Astro.props;
                 )
               }
             </div>
-            <h1>{title}</h1>
+            <h1
+              transition:name={`title-${id}`}
+              transition:animate="initial"
+            >
+              {title}
+            </h1>
             <hr />
           </div>
           <slot />
