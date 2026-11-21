@@ -12,18 +12,20 @@
     "prepare": "husky"
   },
   "devDependencies": {
-    "@astrojs/check": "^0.9.4",
-    "@astrojs/mdx": "^3.1.9",
-    "@astrojs/rss": "^4.0.9",
-    "@astrojs/sitemap": "^3.2.1",
-    "@biomejs/biome": "^1.9.4",
-    "@playform/compress": "^0.1.6",
-    "@shikijs/transformers": "^1.23.1",
-    "@vite-pwa/astro": "^0.4.3",
-    "astro": "^4.16.13",
+    "@astrojs/check": "^0.9.12",
+    "@astrojs/markdown-remark": "^7.3.10",
+    "@astrojs/mdx": "^8.1.6",
+    "@astrojs/rss": "^4.0.19",
+    "@astrojs/sitemap": "^3.7.6",
+    "@biomejs/biome": "^2.6.8",
+    "@playform/compress": "^0.2.5",
+    "@shikijs/transformers": "^4.6.0",
+    "@vite-pwa/astro": "^2.0.4",
+    "astro": "^7.4.13",
     "husky": "^9.1.7",
     "rehype-external-links": "^3.0.0",
-    "sharp": "^0.33.5",
-    "typescript": "^5.6.3"
+    "sharp": "^0.35.5",
+    "typescript": "^6.0.3",
+    "zod": "^4.6.7"
   }
 }

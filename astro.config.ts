@@ -1,5 +1,7 @@
+import { unified } from "@astrojs/markdown-remark";
 import mdx from "@astrojs/mdx";
 import sitemap from "@astrojs/sitemap";
+import playformCompress from "@playform/compress";
 import {
   transformerMetaHighlight,
   transformerMetaWordHighlight,
@@ -9,10 +11,8 @@ import {
   transformerNotationHighlight,
   transformerNotationWordHighlight,
 } from "@shikijs/transformers";
+import { AstroPWAIntegration } from "@vite-pwa/astro";
 import { defineConfig } from "astro/config";
-
-import playformCompress from "@playform/compress";
-import AstroPWA from "@vite-pwa/astro";
 import rehypeExternalLinks from "rehype-external-links";
 
 // https://astro.build/config
@@ -20,21 +20,17 @@ export default defineConfig({
   compressHTML: true,
   site: "https://oliveirarleo.com",
   integrations: [
-    mdx({
-      rehypePlugins: [
-        [rehypeExternalLinks, { rel: ["noopener"], target: ["_blank"] }],
-      ],
-    }),
+    mdx(),
     sitemap(),
-    AstroPWA({
+    AstroPWAIntegration({
       devOptions: {
         enabled: true,
       },
-      workbox: {
+      generateSW: {
         navigateFallback: "/",
         globPatterns: ["**/*.{css,js,html,svg,png,ico,txt}"],
+        globIgnores: ["favicon.svg", "pwa-*.png"],
       },
-      mode: "production",
       base: "/",
       scope: "/",
       includeAssets: ["favicon.svg"],
@@ -53,11 +49,6 @@ export default defineConfig({
             src: "pwa-512x512.png",
             sizes: "512x512",
             type: "image/png",
-          },
-          {
-            src: "pwa-512x512.png",
-            sizes: "512x512",
-            type: "image/png",
             purpose: "any maskable",
           },
         ],
@@ -66,7 +57,11 @@ export default defineConfig({
     playformCompress(),
   ],
   markdown: {
-    rehypePlugins: [rehypeExternalLinks],
+    processor: unified({
+      rehypePlugins: [
+        [rehypeExternalLinks, { rel: ["noopener"], target: ["_blank"] }],
+      ],
+    }),
     shikiConfig: {
       // https://shiki.style/themes
       theme: "github-dark",

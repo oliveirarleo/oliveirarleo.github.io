@@ -94,7 +94,7 @@ const posts = (await getCollection("personal")).sort(
           {
             posts.map((post) => (
               <li>
-                <a href={`/personal/${post.slug}/`}>
+                <a href={`/personal/${post.id}/`}>
                   <Image
                     transition:name={post.id}
                     transition:animate="initial"

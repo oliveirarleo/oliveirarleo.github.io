@@ -1,0 +1,10 @@
+supportedArchitectures:
+  libc:
+    - glibc
+    - musl
+
+minimumReleaseAgeExclude:
+  - "@unplugin-pwa/core@0.0.8"
+  - "@unplugin-pwa/inspector@0.0.8"
+  - "@unplugin-pwa/vite@0.0.8"
+  - "@vite-pwa/astro@2.0.4"

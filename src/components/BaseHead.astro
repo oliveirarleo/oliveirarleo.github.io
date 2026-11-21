@@ -3,7 +3,7 @@
 // all pages through the use of the <BaseHead /> component.
 import "../styles/global.css";
 
-import { ViewTransitions } from "astro:transitions";
+import { ClientRouter } from "astro:transitions";
 
 interface Props {
   title: string;
@@ -24,7 +24,7 @@ const { title, description, image = "/placeholder.jpg" } = Astro.props;
 <meta name="theme-color" content="#015293" />
 <meta name="generator" content={Astro.generator} />
 
-<ViewTransitions />
+<ClientRouter />
 
 <!-- Font preloads -->
 <link
