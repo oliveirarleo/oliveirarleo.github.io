@@ -56,3 +56,7 @@ migrations:
 # Build the static site
 build:
     pnpm build
+
+# Deploy the wishlist subdomain Worker (requires `wrangler login`)
+deploy:worker:
+    wrangler deploy

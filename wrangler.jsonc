@@ -1,0 +1,12 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "wishlist-subdomain",
+  "main": "cloudflare/wishlist-worker.ts",
+  "compatibility_date": "2026-11-21",
+  "routes": [
+    {
+      "pattern": "wishlist.oliveirarleo.com",
+      "custom_domain": true
+    }
+  ]
+}

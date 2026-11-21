@@ -235,9 +235,22 @@ sqlite3 /var/lib/wishlist/wishes.db \
 ## Subdomain Worker
 
 `cloudflare/wishlist-worker.ts` proxies the wishlist subdomain to the existing
-GitHub Pages site while preserving the subdomain URL. Create a Worker with the
-route `wishlist.oliveirarleo.com/*` and paste that module into the Cloudflare
-dashboard.
+GitHub Pages site while preserving the subdomain URL.
+
+Authenticate Wrangler once:
+
+```sh
+wrangler login
+```
+
+Then deploy the Worker and its custom domain:
+
+```sh
+just deploy:worker
+```
+
+The custom domain `wishlist.oliveirarleo.com` is declared in `wrangler.jsonc`,
+so Cloudflare creates the DNS record and route automatically.
 
 The worker rewrites only `/` to `/wishlist/`. Asset requests such as
 `/_astro/*` are proxied unchanged to `oliveirarleo.com`.
