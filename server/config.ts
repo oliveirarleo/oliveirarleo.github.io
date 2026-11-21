@@ -1,4 +1,5 @@
 import { Effect, Schema } from "effect";
+import { logger } from "./logger.ts";
 
 const portSchema = Schema.NumberFromString.check(
   Schema.isInt(),
@@ -18,11 +19,9 @@ export const envSchema = Schema.Struct({
   DATABASE_PATH: Schema.NonEmptyString.pipe(
     Schema.withDecodingDefaultTypeKey(Effect.succeed("./data/wishes.db")),
   ),
-  ALLOWED_ORIGIN: Schema.NonEmptyString.pipe(
-    Schema.withDecodingDefaultTypeKey(
-      Effect.succeed("https://oliveirarleo.com"),
-    ),
-  ),
+  ALLOWED_ORIGIN: Schema.NonEmptyString,
+  BETTER_AUTH_SECRET: Schema.String.check(Schema.isMinLength(32)),
+  WISHLIST_SECRET_PEPPER: Schema.NonEmptyString,
   TURNSTILE_SECRET: Schema.optional(Schema.NonEmptyString),
 });
 
@@ -33,8 +32,7 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   try {
     config = Schema.decodeUnknownSync(envSchema)(env);
   } catch (error) {
-    console.error("Invalid environment configuration:");
-    console.error(error);
+    logger.error({ err: error }, "Invalid environment configuration");
     throw new Error("Invalid environment configuration.", { cause: error });
   }
 

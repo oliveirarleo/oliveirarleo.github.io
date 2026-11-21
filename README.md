@@ -71,23 +71,37 @@ just migrations  # generate Drizzle migrations after editing schema.ts
 - **Storage:** SQLite at `/var/lib/wishlist/wishes.db`.
 - **Migrations:** versioned SQL files in `server/migrations/`, generated with
   Drizzle Kit and applied automatically on API startup.
-- **Spam protection:** Cloudflare Turnstile plus an in-memory IP rate limit.
+- **Identity and authorization:** Better Auth with its Drizzle adapter owns user identity. Wishlist credentials use unique HMAC lookups plus peppered scrypt hashes; no public Better Auth routes are mounted.
+- **Spam protection:** Cloudflare Turnstile plus strict in-memory IP/global rate limits on secret attempts.
 
 The API parses `process.env` with an Effect Schema in `server/config.ts` and
 fails fast with a clear error for invalid values.
 
-The public API is append-only except for creator-authorized deletion. It
-supports:
+The public API supports:
 
-- `GET /api/health`
-- `GET /api/wishes`
-- `POST /api/wishes` with `{ author, name, link, turnstileToken }`
-- `DELETE /api/wishes/:id` with `{ deleteToken }`
+- `GET /api/health` with a real SQLite check
+- `GET /api/wishes?limit=500&offset=0` (maximum limit 1000)
+- `POST /api/wishes` with `{ author, name, link, turnstileToken, secret? }`
+- `POST /api/session` with `{ secret, turnstileToken? }`
+- `POST /api/session/rotate` with `X-Wishlist-Secret`
+- `DELETE /api/wishes/:id` with `X-Wishlist-Secret`
 
-`POST` returns a one-time `deleteToken`. The browser stores it in
-`localStorage`, so only the browser that created a wish can remove it. The
-server stores only a SHA-256 hash of the token. Wishes are grouped by author in
-the browser; there is no public edit endpoint.
+The first wish for a case-insensitive name creates a Better Auth user and a
+six-character secret using alphabet `A-Z2-9` (without ambiguous characters).
+The browser stores known secrets in `localStorage` under
+`wishlist-user-secrets-v1`. The secret can assume the same user on another
+browser, add wishes, rotate the secret, and remove only that user's wishes.
+GET responses never expose secrets, key hashes, email placeholders, or auth
+account details.
+
+Six characters provide only about 30 bits of entropy. Assume-session attempts
+have strict IP and global rate limits and require Turnstile when configured.
+Losing a secret requires an administrator to reset it directly in the
+credential store; there is no recovery endpoint.
+
+**Migration policy:** the user-secret migration intentionally drops old wishes
+and deletion tokens. Back up `/var/lib/wishlist/wishes.db` before restarting
+the upgraded service.
 
 ### Database migrations
 
@@ -102,11 +116,11 @@ migrations with `drizzle-orm/node-sqlite/migrator` before accepting requests.
 
 ### Environment files
 
-| File | Purpose | Loaded by |
-| --- | --- | --- |
-| `.env` | Base local defaults | Node and Astro |
-| `.dev.env` | Development overrides, no secrets | Node via `pnpm dev:api` |
-| `.env.example` | Documented base template | Committed, not loaded |
+| File           | Purpose                           | Loaded by               |
+| -------------- | --------------------------------- | ----------------------- |
+| `.env`         | Base local defaults               | Node and Astro          |
+| `.dev.env`     | Development overrides, no secrets | Node via `pnpm dev:api` |
+| `.env.example` | Documented base template          | Committed, not loaded   |
 
 Load order for the API:
 
@@ -118,8 +132,9 @@ Later files override earlier ones, while existing shell/systemd variables win
 over all files. Production systemd uses its own `Environment` and
 `EnvironmentFile`.
 
-Secrets are not stored in env files. Production reads `TURNSTILE_SECRET` from
-sops-nix; export it in your shell only when testing Turnstile locally.
+Production secrets are not stored in env files. Production reads
+`TURNSTILE_SECRET`, `BETTER_AUTH_SECRET`, and `WISHLIST_SECRET_PEPPER` from
+sops-nix. `.dev.env` contains only public development-only values.
 
 Cloudflare values:
 
@@ -132,56 +147,65 @@ The Turnstile widget must allow the `oliveirarleo.com` hostname.
 
 Frontend, evaluated by Astro at build time:
 
-| Variable | Purpose |
-| --- | --- |
-| `PUBLIC_WISHLIST_API_URL` | API base URL, for example `https://wishlist-api.oliveirarleo.com` |
+| Variable                    | Purpose                                                                    |
+| --------------------------- | -------------------------------------------------------------------------- |
+| `PUBLIC_WISHLIST_API_URL`   | API base URL, for example `https://wishlist-api.oliveirarleo.com`          |
 | `PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key; leave empty only when Turnstile is disabled |
 
 Backend:
 
-| Variable | Purpose |
-| --- | --- |
-| `HOST` | Bind address, default `127.0.0.1` |
-| `PORT` | Port, default `8787` |
-| `DATABASE_PATH` | SQLite path, default `./data/wishes.db` locally |
-| `ALLOWED_ORIGIN` | Exact allowed browser origin |
-| `TURNSTILE_SECRET` | Turnstile secret from sops; required when `NODE_ENV=production` |
+| Variable                 | Purpose                                                         |
+| ------------------------ | --------------------------------------------------------------- |
+| `HOST`                   | Bind address, default `127.0.0.1`                               |
+| `PORT`                   | Port, default `8787`                                            |
+| `DATABASE_PATH`          | SQLite path, default `./data/wishes.db` locally                 |
+| `ALLOWED_ORIGIN`         | Exact allowed browser origin                                    |
+| `TURNSTILE_SECRET`       | Turnstile secret from sops; required when `NODE_ENV=production` |
+| `BETTER_AUTH_SECRET`     | Random Better Auth secret of at least 32 characters from sops   |
+| `WISHLIST_SECRET_PEPPER` | Random server-side pepper for secret lookup HMACs               |
 
 For GitHub Pages, set the public site key as a repository variable named
 `TURNSTILE_SITE_KEY`. The build workflow passes it to Astro.
 
 ## Deploying the API on NixOS
 
-This service follows the same module layout as the other services under
-`/etc/nixos/services/`. Copy the directory into place:
-
-```sh
-cp -r nixos/wishlist /etc/nixos/services/wishlist
-```
-
-Add it to the `modules` list in `/etc/nixos/flake.nix`, like the other
-services:
+Add the repository as a flake input in `/etc/nixos/flake.nix` and import its
+module. A locked path input is copied into the Nix store, so this works in
+pure evaluation mode without a separate `source` option:
 
 ```nix
-nixosConfigurations.<hostname> = nixpkgs.lib.nixosSystem {
-  modules = [
-    ./configuration.nix
-    ./services/wishlist/default.nix
-    # other modules...
-  ];
-};
+{
+  inputs.wishlist.url = "path:/home/mainframe/git/p/oliveirarleo.github.io";
+
+  outputs = { nixpkgs, wishlist, ... }: {
+    nixosConfigurations.<hostname> = nixpkgs.lib.nixosSystem {
+      modules = [
+        ./configuration.nix
+        wishlist.nixosModules.default
+        # other modules...
+      ];
+    };
+  };
+}
 ```
 
-If you previously added `wishlist.url` or
-`inputs.wishlist.nixosModules.default`, remove them.
+Do not copy `nixos/wishlist` into `/etc/nixos/services` or set
+`services.wishlist.source`; the package defaults to the flake input's source
+at build time and runs entirely from its immutable Nix store output.
 
 Keep the secret out of the Nix store with sops-nix in `configuration.nix`:
 
 ```nix
 sops.secrets.wishlist_turnstile_secret = {};
+sops.secrets.wishlist_better_auth_secret = {};
+sops.secrets.wishlist_secret_pepper = {};
 
 sops.templates."wishlist.env" = {
-  content = "TURNSTILE_SECRET=${config.sops.placeholder.wishlist_turnstile_secret}";
+  content = ''
+    TURNSTILE_SECRET=${config.sops.placeholder.wishlist_turnstile_secret}
+    BETTER_AUTH_SECRET=${config.sops.placeholder.wishlist_better_auth_secret}
+    WISHLIST_SECRET_PEPPER=${config.sops.placeholder.wishlist_secret_pepper}
+  '';
   owner = "mainframe";
   mode = "0400";
 };
@@ -197,12 +221,22 @@ services.wishlist = {
 };
 ```
 
-Install the production dependencies before starting the service:
+The module builds an immutable Node 26 package with `buildNpmPackage` and
+runs `${cfg.package}/bin/wishlist-api`; it does not depend on a writable
+checkout or a manual production `pnpm install`. `package-lock.json` is used by
+the Nix build only, while local development and CI continue to use pnpm.
+Back up the database before the first restart because this migration resets
+the old wishlist:
 
 ```sh
-cd /home/mainframe/git/p/oliveirarleo.github.io
-pnpm install --prod --frozen-lockfile
+sudo systemctl stop wishlist
+sudo sqlite3 /var/lib/wishlist/wishes.db \
+  ".backup '/var/lib/wishlist/wishes-pre-user-secrets.db'"
 ```
+
+Generate independent production values with `openssl rand -base64 48` and
+store them in sops as `wishlist_better_auth_secret` and
+`wishlist_secret_pepper`.
 
 The module configures the Cloudflare Tunnel ingress automatically:
 

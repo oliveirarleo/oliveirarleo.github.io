@@ -7,13 +7,13 @@ in
     enable = lib.mkEnableOption "the shared Christmas wishlist API";
 
     package = lib.mkOption {
-      type = lib.types.str;
-      default = "/home/mainframe/git/p/oliveirarleo.github.io";
-      description = ''
-        Checkout containing server/index.ts and its installed node_modules.
-        Run `pnpm install --prod --frozen-lockfile` in this directory before
-        starting the service.
-      '';
+      type = lib.types.package;
+      default = pkgs.callPackage ./package.nix {
+        src = ../..;
+        nodejs = cfg.nodePackage;
+      };
+      defaultText = lib.literalExpression "pkgs.callPackage ./package.nix { src = ../..; }";
+      description = "Immutable wishlist API package built with buildNpmPackage.";
     };
 
     nodePackage = lib.mkOption {
@@ -61,8 +61,8 @@ in
       default = null;
       example = "/run/secrets/wishlist.env";
       description = ''
-        Optional EnvironmentFile containing TURNSTILE_SECRET. A sops-nix
-        template is recommended so the secret is not stored in the Nix store.
+        EnvironmentFile containing TURNSTILE_SECRET, BETTER_AUTH_SECRET and WISHLIST_SECRET_PEPPER.
+        A sops-nix template is recommended so secrets are not stored in the Nix store.
       '';
     };
 
@@ -80,6 +80,14 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    assertions = [
+      {
+        # Cloudflare Universal SSL covers the apex and first-level hostnames only.
+        assertion = lib.length (lib.splitString "." cfg.hostname) <= 3;
+        message = "Cloudflare Universal SSL does not cover nested hostnames such as api.wishlist.oliveirarleo.com.";
+      }
+    ];
+
     services.cloudflared-tunnel = {
       enable = true;
       tunnels = {
@@ -112,8 +120,7 @@ in
         Type = "simple";
         User = cfg.user;
         Group = cfg.group;
-        WorkingDirectory = cfg.package;
-        ExecStart = "${cfg.nodePackage}/bin/node ${cfg.package}/server/index.ts";
+        ExecStart = "${cfg.package}/bin/wishlist-api";
         EnvironmentFile = lib.optional (cfg.environmentFile != null) cfg.environmentFile;
 
         StateDirectory = "wishlist";
@@ -127,7 +134,7 @@ in
         PrivateTmp = true;
         PrivateDevices = true;
         ProtectSystem = "strict";
-        ProtectHome = "read-only";
+        ProtectHome = true;
         ProtectKernelTunables = true;
         ProtectKernelModules = true;
         ProtectControlGroups = true;

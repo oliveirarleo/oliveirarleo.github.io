@@ -13,13 +13,26 @@ import {
   transformerNotationWordHighlight,
 } from "@shikijs/transformers";
 import { AstroPWAIntegration } from "@vite-pwa/astro";
-import { defineConfig } from "astro/config";
+import { defineConfig, envField } from "astro/config";
 import rehypeExternalLinks from "rehype-external-links";
 
 // https://astro.build/config
 export default defineConfig({
   compressHTML: true,
   site: "https://oliveirarleo.com",
+  env: {
+    schema: {
+      PUBLIC_WISHLIST_API_URL: envField.string({
+        context: "client",
+        access: "public",
+      }),
+      PUBLIC_TURNSTILE_SITE_KEY: envField.string({
+        context: "client",
+        access: "public",
+        optional: true,
+      }),
+    },
+  },
   integrations: [
     mdx(),
     solid(),

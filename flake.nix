@@ -5,17 +5,21 @@
   };
 
   outputs = inputs:
-    inputs.flake-utils.lib.eachDefaultSystem (system:
-      let
-        pkgs = (import (inputs.nixpkgs) { inherit system; });
-      in {
-        devShells.default = with pkgs; pkgs.mkShellNoCC {
-          buildInputs = [
-            musl
-            nodejs_26
-            pnpm
-          ];
-        };
-      }
-    );
+    let
+      dev = inputs.flake-utils.lib.eachDefaultSystem (system:
+        let
+          pkgs = (import (inputs.nixpkgs) { inherit system; });
+        in {
+          devShells.default = with pkgs; pkgs.mkShellNoCC {
+            buildInputs = [
+              musl
+              nodejs_26
+              pnpm
+            ];
+          };
+        }
+      );
+    in dev // {
+      nixosModules.default = import ./nixos/wishlist/default.nix;
+    };
 }

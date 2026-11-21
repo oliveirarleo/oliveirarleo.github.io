@@ -2,9 +2,7 @@
   "version": "7",
   "dialect": "sqlite",
   "id": "09aba83b-9119-443a-ace9-d00be9461759",
-  "prevIds": [
-    "00000000-0000-0000-0000-000000000000"
-  ],
+  "prevIds": ["00000000-0000-0000-0000-000000000000"],
   "ddl": [
     {
       "name": "wishes",
@@ -77,9 +75,7 @@
     {
       "table": "wishes",
       "name": "wishes_pk",
-      "columns": [
-        "id"
-      ],
+      "columns": ["id"],
       "nameExplicit": false,
       "entityType": "pks"
     },

@@ -1,149 +1,208 @@
-import { createHash, randomBytes, randomUUID, timingSafeEqual } from "node:crypto";
+import { randomUUID } from "node:crypto";
+import { sql } from "drizzle-orm";
+import { Effect, pipe, Schema } from "effect";
+import { Hono } from "hono";
 import { bodyLimit } from "hono/body-limit";
 import { cors } from "hono/cors";
 import { secureHeaders } from "hono/secure-headers";
-import { Hono } from "hono";
-import type { Context } from "hono";
-import type { ContentfulStatusCode } from "hono/utils/http-status";
-import { Data, Effect, Schema, pipe } from "effect";
-import { asc, eq } from "drizzle-orm";
+import { createAuth } from "./auth.ts";
 import type { WishlistDatabase } from "./database.ts";
-import { wishes } from "./schema.ts";
-import { deleteWishSchema, validWebUrl, wishInputSchema } from "./validation.ts";
-
-class HttpError extends Data.TaggedError("HttpError")<{
-  status: ContentfulStatusCode;
-  message: string;
-}> {}
+import { HttpError, respond } from "./http.ts";
+import { logger } from "./logger.ts";
+import { createRateLimiter } from "./rate-limit.ts";
+import { verifyTurnstile } from "./turnstile.ts";
+import { normalizeUserSecret, validUserSecret } from "./user-secrets.ts";
+import { sessionInputSchema, wishInputSchema } from "./validation.ts";
+import { createWishlistRepository } from "./wishes/repository.ts";
+import { createWishlistService } from "./wishes/service.ts";
 
 export interface AppOptions {
   allowedOrigin: string;
+  authSecret: string;
+  secretPepper: string;
+  nodeEnv?: "development" | "production" | "test";
   turnstileSecret?: string | undefined;
+  turnstileHostname?: string;
   rateLimit?: number;
+  assumeRateLimit?: number;
+  globalAssumeRateLimit?: number;
   rateWindowMs?: number;
+  now?: () => number;
 }
 
-interface TurnstileResponse {
-  success: boolean;
-  action?: string;
-}
-
-const jsonError = (status: ContentfulStatusCode, message: string) =>
-  Effect.fail(new HttpError({ status, message }));
-
-const createDeleteToken = () => randomBytes(32).toString("base64url");
-
-const hashDeleteToken = (token: string) =>
-  createHash("sha256").update(token).digest("hex");
-
-function tokenMatches(storedHash: string | null, token: string) {
-  if (!storedHash) return false;
-  const expected = Buffer.from(storedHash, "hex");
-  const actual = Buffer.from(hashDeleteToken(token), "hex");
-  return expected.length === actual.length && timingSafeEqual(expected, actual);
-}
-
-function takeRateLimit(
-  attempts: Map<string, number[]>,
-  key: string,
-  limit: number,
-  windowMs: number,
-) {
-  const now = Date.now();
-  const recent = (attempts.get(key) ?? []).filter((time) => now - time < windowMs);
-  if (recent.length >= limit) return false;
-  attempts.set(key, [...recent, now]);
-
-  if (attempts.size > 5_000) {
-    for (const [entry, times] of attempts) {
-      if (times.every((time) => now - time >= windowMs)) attempts.delete(entry);
-    }
-  }
-
-  return true;
-}
-
-const verifyTurnstile = (token: string, ip: string, secret: string) =>
-  pipe(
-    Effect.tryPromise({
-      try: async () => {
-        const response = await fetch("https://challenges.cloudflare.com/turnstile/v0/siteverify", {
-          method: "POST",
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          body: new URLSearchParams({ secret, response: token, remoteip: ip }),
-          signal: AbortSignal.timeout(10_000),
-        });
-        return (await response.json()) as TurnstileResponse;
-      },
-      catch: () => new HttpError({ status: 502, message: "Verification is temporarily unavailable." }),
-    }),
-    Effect.flatMap((result) =>
-      result.success && result.action === "wishlist"
-        ? Effect.void
-        : jsonError(400, "Verification failed. Please try again."),
-    ),
-  );
+const serviceCall = <A>(try_: () => Promise<A>) =>
+  Effect.tryPromise({
+    try: try_,
+    catch: (error) =>
+      error instanceof HttpError
+        ? error
+        : new HttpError({
+            status: 500,
+            message: "The request could not be completed.",
+          }),
+  });
 
 export function createApp(
   db: WishlistDatabase,
-  { allowedOrigin, turnstileSecret, rateLimit = 5, rateWindowMs = 10 * 60 * 1000 }: AppOptions,
+  {
+    allowedOrigin,
+    authSecret,
+    secretPepper,
+    nodeEnv = "development",
+    turnstileSecret,
+    turnstileHostname = new URL(allowedOrigin).hostname,
+    rateLimit = 5,
+    assumeRateLimit = 10,
+    globalAssumeRateLimit = 30,
+    rateWindowMs = 10 * 60 * 1000,
+    now,
+  }: AppOptions,
 ) {
-  const attempts = new Map<string, number[]>();
-  const localOrigins = new Set(["http://localhost:4321", "http://127.0.0.1:4321"]);
+  const addLimiter = createRateLimiter({
+    limit: rateLimit,
+    windowMs: rateWindowMs,
+    now,
+  });
+  const deleteLimiter = createRateLimiter({
+    limit: rateLimit,
+    windowMs: rateWindowMs,
+    now,
+  });
+  const assumeLimiter = createRateLimiter({
+    limit: assumeRateLimit,
+    windowMs: rateWindowMs,
+    now,
+  });
+  const globalAssumeLimiter = createRateLimiter({
+    limit: globalAssumeRateLimit,
+    windowMs: rateWindowMs,
+    now,
+  });
+  const auth = createAuth(db, authSecret, allowedOrigin);
+  const service = createWishlistService(
+    createWishlistRepository(db),
+    auth,
+    secretPepper,
+  );
+  const localOrigins = new Set([
+    "http://localhost:4321",
+    "http://127.0.0.1:4321",
+  ]);
   const app = new Hono();
 
-  app.onError((error, c) => {
-    console.error(error);
-    return c.json({ error: "Internal server error." }, 500);
-  });
+  app.onError((_error, c) => c.json({ error: "Internal server error." }, 500));
   app.notFound((c) => c.json({ error: "Not found." }, 404));
 
+  app.use("/api/*", async (c, next) => {
+    const supplied = c.req.header("X-Request-Id");
+    const requestId =
+      supplied && /^[A-Za-z0-9._-]{1,128}$/.test(supplied)
+        ? supplied
+        : randomUUID();
+    const started = performance.now();
+    c.header("X-Request-Id", requestId);
+    c.header("Cache-Control", "no-store");
+    await next();
+    logger.info({
+      requestId,
+      method: c.req.method,
+      path: c.req.path,
+      status: c.res.status,
+      durationMs: Math.round(performance.now() - started),
+    });
+  });
   app.use("*", secureHeaders());
   app.use(
     "/api/*",
     cors({
-      origin: (origin) => (origin === allowedOrigin || localOrigins.has(origin) ? origin : ""),
+      origin: (origin) =>
+        origin === allowedOrigin ||
+        (nodeEnv !== "production" && localOrigins.has(origin))
+          ? origin
+          : "",
       allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
-      allowHeaders: ["Content-Type"],
+      allowHeaders: ["Content-Type", "X-Wishlist-Secret", "X-Request-Id"],
       maxAge: 86400,
     }),
   );
-  app.use("/api/*", bodyLimit({ maxSize: 8 * 1024, onError: (c) => c.json({ error: "Request body is too large." }, 413) }));
+  app.use(
+    "/api/*",
+    bodyLimit({
+      maxSize: 8 * 1024,
+      onError: (c) => c.json({ error: "Request body is too large." }, 413),
+    }),
+  );
+  app.use("/api/*", async (c, next) => {
+    if (
+      c.req.method === "POST" &&
+      !c.req.header("Content-Type")?.startsWith("application/json")
+    ) {
+      return c.json(
+        { error: "Send a JSON body with Content-Type: application/json." },
+        415,
+      );
+    }
+    return next();
+  });
 
-  app.get("/api/health", (c) => c.json({ ok: true }));
+  app.get("/api/health", (c) =>
+    respond(
+      c,
+      pipe(
+        Effect.tryPromise({
+          try: async () => db.run(sql`SELECT 1`),
+          catch: () =>
+            new HttpError({ status: 503, message: "Database unavailable." }),
+        }),
+        Effect.map(() => ({ ok: true })),
+      ),
+    ),
+  );
 
-  app.get("/api/wishes", async (c) => {
-    const program = pipe(
-      Effect.tryPromise({
-        try: () =>
-          db
-            .select({
-              id: wishes.id,
-              author: wishes.author,
-              name: wishes.name,
-              link: wishes.link,
-              createdAt: wishes.createdAt,
-            })
-            .from(wishes)
-            .orderBy(asc(wishes.createdAt)),
-        catch: () => new HttpError({ status: 500, message: "Could not load wishes." }),
-      }),
-      Effect.map((items) => ({ wishes: items })),
+  app.get("/api/wishes", (c) => {
+    const requestedLimit = Number(c.req.query("limit") ?? "500");
+    const requestedOffset = Number(c.req.query("offset") ?? "0");
+    if (
+      !Number.isInteger(requestedLimit) ||
+      requestedLimit < 1 ||
+      requestedLimit > 1000 ||
+      !Number.isInteger(requestedOffset) ||
+      requestedOffset < 0
+    ) {
+      return c.json(
+        {
+          error:
+            "Limit must be 1–1000 and offset must be a non-negative integer.",
+        },
+        400,
+      );
+    }
+    return respond(
+      c,
+      pipe(
+        serviceCall(() => service.list(requestedLimit, requestedOffset)),
+        Effect.map((wishes) => ({
+          wishes,
+          limit: requestedLimit,
+          offset: requestedOffset,
+        })),
+      ),
     );
-    return respond(c, program);
   });
 
   app.post("/api/wishes", async (c) => {
-    const ip = c.req.header("CF-Connecting-IP") ?? c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ?? "local";
-    if (!takeRateLimit(attempts, `add:${ip}`, rateLimit, rateWindowMs)) {
+    const ip = requestIp(
+      c.req.header("CF-Connecting-IP"),
+      c.req.header("X-Forwarded-For"),
+    );
+    if (
+      !addLimiter.take(`add:${ip}`) ||
+      !globalAssumeLimiter.take("assume:global")
+    ) {
       return c.json({ error: "Too many wishes. Please try again later." }, 429);
     }
-
     const program = pipe(
-      Effect.tryPromise({
-        try: () => c.req.json(),
-        catch: () => new HttpError({ status: 400, message: "Send a valid JSON body." }),
-      }),
+      jsonBody(c.req.json()),
       Effect.flatMap((body) =>
         pipe(
           Schema.decodeUnknownEffect(wishInputSchema)(body),
@@ -151,113 +210,140 @@ export function createApp(
             () =>
               new HttpError({
                 status: 400,
-                message: "Check the author, wish, link, and verification fields.",
+                message:
+                  "Check the author, wish, link, and verification fields.",
               }),
-          ),
-          Effect.flatMap((input) => {
-            if (!validWebUrl(input.link)) {
-              return jsonError(400, "The gift link must be a valid HTTP or HTTPS URL.");
-            }
-
-            const wish = {
-              id: randomUUID(),
-              author: input.author,
-              name: input.name,
-              link: input.link,
-              createdAt: new Date().toISOString(),
-            };
-            const deleteToken = createDeleteToken();
-
-            return pipe(
-              turnstileSecret
-                ? verifyTurnstile(input.turnstileToken, ip, turnstileSecret)
-                : Effect.void,
-              Effect.flatMap(() =>
-                Effect.tryPromise({
-                  try: () =>
-                    db.insert(wishes).values({
-                      ...wish,
-                      deleteTokenHash: hashDeleteToken(deleteToken),
-                    }),
-                  catch: () => new HttpError({ status: 500, message: "Could not save your wish." }),
-                }),
-              ),
-              Effect.map(() => ({ wish, deleteToken })),
-            );
-          }),
-        ),
-      ),
-    );
-
-    return respond(c, program, 201);
-  });
-
-  app.delete("/api/wishes/:id", async (c) => {
-    const ip = c.req.header("CF-Connecting-IP") ?? c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ?? "local";
-    if (!takeRateLimit(attempts, `delete:${ip}`, rateLimit, rateWindowMs)) {
-      return c.json({ error: "Too many changes. Please try again later." }, 429);
-    }
-
-    const id = c.req.param("id");
-    const program = pipe(
-      Effect.tryPromise({
-        try: () => c.req.json(),
-        catch: () => new HttpError({ status: 400, message: "Send a valid JSON body." }),
-      }),
-      Effect.flatMap((body) =>
-        pipe(
-          Schema.decodeUnknownEffect(deleteWishSchema)(body),
-          Effect.mapError(
-            () => new HttpError({ status: 400, message: "A delete token is required." }),
           ),
           Effect.flatMap((input) =>
             pipe(
-              Effect.tryPromise({
-                try: () =>
-                  db
-                    .select({ deleteTokenHash: wishes.deleteTokenHash })
-                    .from(wishes)
-                    .where(eq(wishes.id, id))
-                    .limit(1),
-                catch: () => new HttpError({ status: 500, message: "Could not load the wish." }),
-              }),
-              Effect.flatMap(([existing]) => {
-                if (!existing || !tokenMatches(existing.deleteTokenHash, input.deleteToken)) {
-                  return jsonError(404, "Wish not found.");
-                }
-
-                return pipe(
-                  Effect.tryPromise({
-                    try: () => db.delete(wishes).where(eq(wishes.id, id)),
-                    catch: () => new HttpError({ status: 500, message: "Could not remove the wish." }),
-                  }),
-                  Effect.map(() => ({ ok: true })),
-                );
-              }),
+              turnstileSecret
+                ? verifyTurnstile(
+                    input.turnstileToken,
+                    ip,
+                    turnstileSecret,
+                    turnstileHostname,
+                  )
+                : Effect.void,
+              Effect.flatMap(() =>
+                serviceCall(() => service.createWish(input)),
+              ),
             ),
           ),
         ),
       ),
     );
+    return respond(c, program, 201);
+  });
 
+  app.post("/api/session", async (c) => {
+    const ip = requestIp(
+      c.req.header("CF-Connecting-IP"),
+      c.req.header("X-Forwarded-For"),
+    );
+    if (
+      !assumeLimiter.take(`assume:${ip}`) ||
+      !globalAssumeLimiter.take("assume:global")
+    ) {
+      return c.json(
+        { error: "Too many attempts. Please try again later." },
+        429,
+      );
+    }
+    const program = pipe(
+      jsonBody(c.req.json()),
+      Effect.flatMap((body) =>
+        pipe(
+          Schema.decodeUnknownEffect(sessionInputSchema)(body),
+          Effect.mapError(
+            () =>
+              new HttpError({
+                status: 400,
+                message: "A user secret is required.",
+              }),
+          ),
+          Effect.flatMap((input) =>
+            pipe(
+              turnstileSecret
+                ? verifyTurnstile(
+                    input.turnstileToken ?? "",
+                    ip,
+                    turnstileSecret,
+                    turnstileHostname,
+                  )
+                : Effect.void,
+              Effect.flatMap(() =>
+                serviceCall(() => service.assume(input.secret)),
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
     return respond(c, program);
+  });
+
+  app.post("/api/session/rotate", async (c) => {
+    const ip = requestIp(
+      c.req.header("CF-Connecting-IP"),
+      c.req.header("X-Forwarded-For"),
+    );
+    if (
+      !assumeLimiter.take(`assume:${ip}`) ||
+      !globalAssumeLimiter.take("assume:global")
+    ) {
+      return c.json(
+        { error: "Too many attempts. Please try again later." },
+        429,
+      );
+    }
+    const secret = c.req.header("X-Wishlist-Secret");
+    if (!secret || !validUserSecret(secret)) {
+      return c.json({ error: "A valid user secret is required." }, 401);
+    }
+    return respond(
+      c,
+      serviceCall(() => service.rotate(secret)),
+    );
+  });
+
+  app.delete("/api/wishes/:id", async (c) => {
+    const ip = requestIp(
+      c.req.header("CF-Connecting-IP"),
+      c.req.header("X-Forwarded-For"),
+    );
+    if (
+      !deleteLimiter.take(`delete:${ip}`) ||
+      !globalAssumeLimiter.take("assume:global")
+    ) {
+      return c.json(
+        { error: "Too many changes. Please try again later." },
+        429,
+      );
+    }
+    const secret = c.req.header("X-Wishlist-Secret");
+    if (!secret || !validUserSecret(normalizeUserSecret(secret))) {
+      return c.json({ error: "A valid user secret is required." }, 401);
+    }
+    return respond(
+      c,
+      serviceCall(() => service.remove(c.req.param("id"), secret)),
+    );
   });
 
   return app;
 }
 
-async function respond<A>(
-  c: Context,
-  effect: Effect.Effect<A, HttpError>,
-  successStatus: ContentfulStatusCode = 200,
+function jsonBody(input: Promise<unknown>) {
+  return Effect.tryPromise({
+    try: () => input,
+    catch: () =>
+      new HttpError({ status: 400, message: "Send a valid JSON body." }),
+  });
+}
+
+function requestIp(
+  cloudflareIp: string | undefined,
+  forwarded: string | undefined,
 ) {
-  return Effect.runPromise(
-    pipe(
-      effect,
-      Effect.match({
-        onFailure: (error) => c.json({ error: error.message }, error.status),
-        onSuccess: (value) => c.json(value, successStatus),
-      }),
-    ),
-  );
+  return cloudflareIp ?? forwarded?.split(",")[0]?.trim() ?? "local";
 }
