@@ -92,7 +92,9 @@ export function useWishlist(apiUrl: string) {
       setLoaded(true);
       if (result.secret) {
         remember(result.user, result.secret);
-        report(`Wish added. Save your six-character secret: ${result.secret}`);
+        report(
+          "Wish added. Your user secret is ready — select Code to view it.",
+        );
       } else {
         report("Your wish has been added. Merry Christmas!");
       }
@@ -136,7 +138,7 @@ export function useWishlist(apiUrl: string) {
     try {
       const result = await api.rotate(user.secret);
       remember(result.user, result.secret);
-      report(`Secret rotated. Save the new secret: ${result.secret}`);
+      report("Secret rotated. Select Code to view the new secret.");
       return true;
     } catch (error) {
       report(errorMessage(error, "Could not rotate the secret."), true);

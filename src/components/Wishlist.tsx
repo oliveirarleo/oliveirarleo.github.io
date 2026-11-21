@@ -92,6 +92,8 @@ export default function Wishlist(props: WishlistProps) {
           <UserSession
             activeUser={wishlist.activeUser()}
             knownUsers={wishlist.knownUsers()}
+            status={wishlist.status()}
+            statusHasError={wishlist.statusHasError()}
             turnstileSiteKey={props.turnstileSiteKey}
             onAssume={wishlist.assume}
             onSelect={wishlist.selectUser}

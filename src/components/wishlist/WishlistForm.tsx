@@ -75,18 +75,18 @@ export default function WishlistForm(props: {
         props.onInput();
       }}
     >
-      <label for="author">Your name</label>
-      <input
-        id="author"
-        name="author"
-        type="text"
-        placeholder="e.g. Charlie"
-        autocomplete="name"
-        maxlength="60"
-        value={props.activeUser?.name ?? ""}
-        readOnly={Boolean(props.activeUser)}
-        required
-      />
+      <Show when={!props.activeUser}>
+        <label for="author">Your name</label>
+        <input
+          id="author"
+          name="author"
+          type="text"
+          placeholder="e.g. Charlie"
+          autocomplete="name"
+          maxlength="60"
+          required
+        />
+      </Show>
 
       <label for="name">What are you wishing for?</label>
       <input

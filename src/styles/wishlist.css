@@ -592,17 +592,52 @@
   margin-top: 10px;
 }
 
+.wishlist-page .open-session-button {
+  margin-top: 12px;
+}
+
 .wishlist-page .session-heading {
   display: flex;
-  align-items: start;
+  align-items: center;
   justify-content: space-between;
   gap: 8px;
+}
+
+.wishlist-page .code-button {
+  flex: 0 0 auto;
+  min-height: 30px;
+  padding: 4px 12px;
+  font-weight: 650;
 }
 
 .wishlist-page .active-user {
   color: #476a58;
   font-size: 11px;
   font-weight: 650;
+}
+
+.wishlist-page .icon-button {
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  flex: 0 0 auto;
+  padding: 0;
+  border: 1px solid #d7ddd5;
+  border-radius: 6px;
+  background: #fff;
+  color: #355a4a;
+  cursor: pointer;
+}
+
+.wishlist-page .session-heading .icon-button svg {
+  width: 18px;
+  height: 18px;
+}
+
+.wishlist-page .icon-button:focus-visible {
+  outline: 2px solid #b88a3e;
+  outline-offset: 2px;
 }
 
 .wishlist-page .secret-row {
@@ -623,6 +658,11 @@
   letter-spacing: 7px;
   text-align: center;
   user-select: all;
+}
+
+.wishlist-page .session-dialog .user-secret {
+  font-size: 22px;
+  letter-spacing: 6px;
 }
 
 .wishlist-page .secondary-button,
