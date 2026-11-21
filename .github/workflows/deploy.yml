@@ -18,7 +18,7 @@ jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      PUBLIC_WISHLIST_API_URL: https://api.wishlist.oliveirarleo.com
+      PUBLIC_WISHLIST_API_URL: https://wishlist-api.oliveirarleo.com
       PUBLIC_TURNSTILE_SITE_KEY: ${{ vars.TURNSTILE_SITE_KEY }}
     steps:
       - name: Checkout your repository using git

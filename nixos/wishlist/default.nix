@@ -42,7 +42,7 @@ in
 
     hostname = lib.mkOption {
       type = lib.types.str;
-      default = "api.wishlist.oliveirarleo.com";
+      default = "wishlist-api.oliveirarleo.com";
       description = "Public hostname routed to the API by Cloudflare Tunnel.";
     };
 

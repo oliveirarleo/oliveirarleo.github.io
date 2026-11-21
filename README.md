@@ -66,7 +66,7 @@ just migrations  # generate Drizzle migrations after editing schema.ts
 - **Shared API:** Hono + Effect + Drizzle on `node:sqlite`, running on the
   NixOS server. Drizzle is pinned to the 1.0 release candidate because the
   stable release does not yet ship the `node:sqlite` driver.
-- **Public API host:** `api.wishlist.oliveirarleo.com` through Cloudflare
+- **Public API host:** `wishlist-api.oliveirarleo.com` through Cloudflare
   Tunnel.
 - **Storage:** SQLite at `/var/lib/wishlist/wishes.db`.
 - **Migrations:** versioned SQL files in `server/migrations/`, generated with
@@ -134,7 +134,7 @@ Frontend, evaluated by Astro at build time:
 
 | Variable | Purpose |
 | --- | --- |
-| `PUBLIC_WISHLIST_API_URL` | API base URL, for example `https://api.wishlist.oliveirarleo.com` |
+| `PUBLIC_WISHLIST_API_URL` | API base URL, for example `https://wishlist-api.oliveirarleo.com` |
 | `PUBLIC_TURNSTILE_SITE_KEY` | Cloudflare Turnstile site key; leave empty only when Turnstile is disabled |
 
 Backend:
@@ -192,8 +192,8 @@ services.wishlist = {
   tunnelId = "<tunnel-id>";
   credentialsFile = "/home/mainframe/.cloudflared/<tunnel-id>.json";
 
-  # Optional, defaults to api.wishlist.oliveirarleo.com:
-  # hostname = "api.wishlist.oliveirarleo.com";
+  # Optional, defaults to wishlist-api.oliveirarleo.com:
+  # hostname = "wishlist-api.oliveirarleo.com";
 };
 ```
 
@@ -207,13 +207,13 @@ pnpm install --prod --frozen-lockfile
 The module configures the Cloudflare Tunnel ingress automatically:
 
 ```text
-api.wishlist.oliveirarleo.com -> http://127.0.0.1:8787
+wishlist-api.oliveirarleo.com -> http://127.0.0.1:8787
 ```
 
 Create the public DNS route:
 
 ```sh
-cloudflared tunnel route dns <tunnel-id> api.wishlist.oliveirarleo.com
+cloudflared tunnel route dns <tunnel-id> wishlist-api.oliveirarleo.com
 ```
 
 Do not open port `8787` in the firewall. The API is only reachable through the
