@@ -1,0 +1,106 @@
+{
+  "version": "7",
+  "dialect": "sqlite",
+  "id": "09aba83b-9119-443a-ace9-d00be9461759",
+  "prevIds": [
+    "00000000-0000-0000-0000-000000000000"
+  ],
+  "ddl": [
+    {
+      "name": "wishes",
+      "entityType": "tables"
+    },
+    {
+      "table": "wishes",
+      "name": "id",
+      "type": "text",
+      "notNull": false,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "wishes",
+      "name": "author",
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "wishes",
+      "name": "name",
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "wishes",
+      "name": "link",
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "wishes",
+      "name": "created_at",
+      "type": "text",
+      "notNull": true,
+      "autoincrement": false,
+      "default": null,
+      "generated": null,
+      "entityType": "columns"
+    },
+    {
+      "table": "wishes",
+      "name": "wishes_created_at_idx",
+      "columns": [
+        {
+          "value": "created_at",
+          "isExpression": false
+        }
+      ],
+      "isUnique": false,
+      "where": null,
+      "origin": "manual",
+      "entityType": "indexes"
+    },
+    {
+      "table": "wishes",
+      "name": "wishes_pk",
+      "columns": [
+        "id"
+      ],
+      "nameExplicit": false,
+      "entityType": "pks"
+    },
+    {
+      "table": "wishes",
+      "name": "wishes_author_length",
+      "value": "length(\"author\") between 1 and 60",
+      "entityType": "checks"
+    },
+    {
+      "table": "wishes",
+      "name": "wishes_name_length",
+      "value": "length(\"name\") between 1 and 120",
+      "entityType": "checks"
+    },
+    {
+      "table": "wishes",
+      "name": "wishes_link_length",
+      "value": "length(\"link\") between 1 and 2000",
+      "entityType": "checks"
+    }
+  ],
+  "renames": []
+}

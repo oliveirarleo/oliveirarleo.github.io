@@ -9,7 +9,10 @@
   "scripts": {
     "test": "pnpm biome check . --fix",
     "dev": "astro dev",
+    "dev:api": "NODE_ENV=development node --env-file-if-exists=.env --env-file-if-exists=.dev.env --watch server/index.ts",
     "start": "astro dev",
+    "start:api": "NODE_ENV=production node --env-file-if-exists=.env server/index.ts",
+    "test:api": "node --test server/*.test.ts",
     "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro",
@@ -21,15 +24,25 @@
     "@astrojs/mdx": "^8.1.6",
     "@astrojs/rss": "^4.0.19",
     "@astrojs/sitemap": "^3.7.6",
+    "@astrojs/solid-js": "7.1.6",
     "@biomejs/biome": "^2.6.8",
     "@playform/compress": "^0.2.5",
     "@shikijs/transformers": "^4.6.0",
+    "@types/node": "^26.6.6",
     "@vite-pwa/astro": "^2.0.4",
     "astro": "^7.4.13",
+    "drizzle-kit": "1.0.0-rc.6",
     "husky": "^9.1.7",
     "rehype-external-links": "^3.0.0",
     "sharp": "^0.35.5",
     "typescript": "^6.0.3",
     "zod": "^4.6.7"
+  },
+  "dependencies": {
+    "@hono/node-server": "^2.1.9",
+    "drizzle-orm": "1.0.0-rc.6",
+    "effect": "^4.1.4",
+    "hono": "^4.13.19",
+    "solid-js": "1.9.20"
   }
 }

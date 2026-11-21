@@ -9,6 +9,9 @@ dist/
 # dependencies
 node_modules/
 
+# local wishlist database
+data/
+
 # logs
 npm-debug.log*
 yarn-debug.log*

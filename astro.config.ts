@@ -1,6 +1,7 @@
 import { unified } from "@astrojs/markdown-remark";
 import mdx from "@astrojs/mdx";
 import sitemap from "@astrojs/sitemap";
+import solid from "@astrojs/solid-js";
 import playformCompress from "@playform/compress";
 import {
   transformerMetaHighlight,
@@ -21,6 +22,7 @@ export default defineConfig({
   site: "https://oliveirarleo.com",
   integrations: [
     mdx(),
+    solid(),
     sitemap(),
     AstroPWAIntegration({
       devOptions: {

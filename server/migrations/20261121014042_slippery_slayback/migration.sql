@@ -1,0 +1,1 @@
+ALTER TABLE `wishes` ADD `delete_token_hash` text;
