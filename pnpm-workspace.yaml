@@ -10,3 +10,6 @@ minimumReleaseAgeExclude:
   - "@vite-pwa/astro@2.0.4"
   - drizzle-orm@1.0.0-rc.6
   - drizzle-kit@1.0.0-rc.6
+
+allowBuilds:
+  esbuild: true
