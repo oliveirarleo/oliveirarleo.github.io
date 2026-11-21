@@ -63,18 +63,20 @@ Trade-offs we are accepting:
 - **A new name is signed in on the device that registered it.** The secret is
   returned in the same response, and the browser keeps it for the owner.
 - **Migration:** the Better Auth migration (`20261121102107_better_auth_username`)
-  keeps every existing wish and name. Accounts that existed before it have no
-  password, so they cannot sign in. Their names stay taken, so registering the
-  same name again is refused. An administrator must set a new secret for each
-  one in the credential store. The earlier migration that introduced this model
-  already dropped wishes from before it.
+  keeps every existing wish, name, and secret. Accounts that predate it keep
+  their original six characters: on the first sign-in the API verifies the old
+  scrypt hash in `legacy_wishlist_secrets` and copies the same secret into the
+  Better Auth password, then deletes the legacy row. This needs
+  `WISHLIST_SECRET_PEPPER`, and the table can be dropped once drained. The
+  earlier migration that introduced this model already dropped wishes from
+  before it.
 - **Legacy name normalization.** The migration backfills `username` in SQL.
   SQLite's `lower()` lowercases ASCII letters only, so for legacy rows without a
   `name_key` a non-ASCII name can differ from the TypeScript normalizer. Rows
   that have a `name_key` keep it, because `coalesce(name_key, …)` runs first;
   it was computed with `toLocaleLowerCase` before this change. Those legacy
-  accounts have no password, so they cannot sign in; the only effect is that a
-  re-registration of such a non-ASCII name may not be refused. Do not extend
+  accounts are upgraded on first sign-in like any other; the only effect is that
+  a re-registration of such a non-ASCII name may not be refused. Do not extend
   the migration to match: the TypeScript normalizer is the single rule for new
   names and sign-in.
 

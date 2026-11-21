@@ -1,8 +1,13 @@
+import { createHmac, randomUUID, scrypt as scryptCallback } from "node:crypto";
+import { promisify } from "node:util";
 import { expect, it } from "vitest";
 import type { AppOptions } from "./app.ts";
 import { createApp } from "./app.ts";
 import { createDatabase } from "./database.ts";
 import { WISH_LIMIT } from "./wishes/repository.ts";
+
+const scrypt = promisify(scryptCallback);
+const LEGACY_PEPPER = "test-only-legacy-pepper";
 
 function testApp(rateLimit = 20, options: Partial<AppOptions> = {}) {
   const { db, client } = createDatabase(":memory:");
@@ -12,7 +17,7 @@ function testApp(rateLimit = 20, options: Partial<AppOptions> = {}) {
     authSecret: "test-only-auth-secret-at-least-32-characters",
     ...options,
   });
-  return Object.assign(app, { close: () => client.close() });
+  return Object.assign(app, { close: () => client.close(), client });
 }
 
 type TestApp = ReturnType<typeof testApp>;
@@ -706,5 +711,80 @@ it("API failures use the shared error envelope", async () => {
   expect(await wrongType.json()).toMatchObject({
     error: { code: "unsupported_media_type" },
   });
+  app.close();
+});
+
+/**
+ * Recreates a pre-ADR-0001 account: the secret lives in the legacy store and
+ * Better Auth holds a random password nobody knows, exactly like production.
+ */
+async function makeLegacyAccount(
+  app: TestApp,
+  name: string,
+  secret: string,
+) {
+  const registered = await registerName(app, name);
+  const userId = registered.user.id;
+  const salt = "0123456789abcdef0123456789abcdef";
+  const hash = ((await scrypt(secret, salt, 32)) as Buffer).toString("hex");
+  const lookup = createHmac("sha256", LEGACY_PEPPER)
+    .update(secret)
+    .digest("hex");
+  app.client
+    .prepare(
+      `insert into legacy_wishlist_secrets
+         (id, user_id, secret_lookup, secret_hash, secret_salt, created_at)
+       values (?, ?, ?, ?, ?, ?)`,
+    )
+    .run(randomUUID(), userId, lookup, hash, salt, new Date().toISOString());
+  app.client
+    .prepare("update account set password = ? where user_id = ?")
+    .run(`${salt}:${"0".repeat(128)}`, userId);
+  return { userId, lookup };
+}
+
+const legacyRow = (app: TestApp, lookup: string) =>
+  app.client
+    .prepare(
+      "select 1 from legacy_wishlist_secrets where secret_lookup = ? limit 1",
+    )
+    .get(lookup);
+
+it("upgrades a pre-ADR-0001 secret to a Better Auth password on first sign-in", async () => {
+  const app = testApp(20, { secretPepper: LEGACY_PEPPER });
+  const { lookup } = await makeLegacyAccount(app, "Legacy Leo", "ABCDEF");
+
+  const response = await signIn(app, "Legacy Leo", "ABCDEF");
+  expect(response.status).toBe(200);
+  expect((await response.json()).user.name).toBe("Legacy Leo");
+  // Drained, so the next sign-in must go through Better Auth.
+  expect(legacyRow(app, lookup)).toBeUndefined();
+  expect((await signIn(app, "Legacy Leo", "ABCDEF")).status).toBe(200);
+  app.close();
+});
+
+it("keeps the legacy row when the secret is wrong or the name does not match", async () => {
+  const app = testApp(20, { secretPepper: LEGACY_PEPPER });
+  const { lookup } = await makeLegacyAccount(app, "Legacy Leo", "ABCDEF");
+  await registerName(app, "Someone Else");
+
+  expect((await signIn(app, "Legacy Leo", "ZZZZZZ")).status).toBe(401);
+  expect(legacyRow(app, lookup)).toBeDefined();
+
+  // A valid secret must not upgrade a name it does not belong to.
+  expect((await signIn(app, "Someone Else", "ABCDEF")).status).toBe(401);
+  expect(legacyRow(app, lookup)).toBeDefined();
+
+  expect((await signIn(app, "Legacy Leo", "ABCDEF")).status).toBe(200);
+  expect(legacyRow(app, lookup)).toBeUndefined();
+  app.close();
+});
+
+it("refuses legacy secrets when no pepper is configured", async () => {
+  const app = testApp();
+  const { lookup } = await makeLegacyAccount(app, "Legacy Leo", "ABCDEF");
+
+  expect((await signIn(app, "Legacy Leo", "ABCDEF")).status).toBe(401);
+  expect(legacyRow(app, lookup)).toBeDefined();
   app.close();
 });

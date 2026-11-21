@@ -17,6 +17,8 @@ import { createWishlistService } from "./wishes/service.ts";
 export interface AppOptions {
   allowedOrigin: string;
   authSecret: string;
+  /** Only needed to upgrade accounts created before ADR 0001. */
+  secretPepper?: string | undefined;
   nodeEnv?: "development" | "production" | "test";
   turnstileSecret?: string | undefined;
   turnstileHostname?: string;
@@ -36,6 +38,7 @@ export function createApp(
   {
     allowedOrigin,
     authSecret,
+    secretPepper,
     nodeEnv = "development",
     turnstileSecret,
     turnstileHostname = new URL(allowedOrigin).hostname,
@@ -59,7 +62,11 @@ export function createApp(
     globalAssume: limiter(globalAssumeRateLimit),
   };
   const auth = createAuth(db, authSecret, allowedOrigin);
-  const service = createWishlistService(createWishlistRepository(db), auth);
+  const service = createWishlistService(
+    createWishlistRepository(db),
+    auth,
+    secretPepper,
+  );
   const localOrigins = new Set([
     "http://localhost:4321",
     "http://127.0.0.1:4321",

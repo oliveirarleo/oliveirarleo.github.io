@@ -9,6 +9,7 @@ const { db, client } = createDatabase(config.DATABASE_PATH);
 const app = createApp(db, {
   allowedOrigin: config.ALLOWED_ORIGIN,
   authSecret: config.BETTER_AUTH_SECRET,
+  secretPepper: config.WISHLIST_SECRET_PEPPER,
   trustProxy: config.TRUST_PROXY,
   nodeEnv: config.NODE_ENV,
   turnstileSecret: config.TURNSTILE_SECRET,

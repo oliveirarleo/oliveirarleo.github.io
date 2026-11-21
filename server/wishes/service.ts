@@ -3,7 +3,7 @@ import { APIError } from "better-auth";
 import { isReaction, type Reaction } from "../../shared/reactions.ts";
 import { type createAuth, normalizeUsername } from "../auth.ts";
 import { HttpError } from "../http.ts";
-import { createUserSecret, normalizeUserSecret } from "../user-secrets.ts";
+import { createUserSecret, secretLookup, normalizeUserSecret, verifyUserSecret } from "../user-secrets.ts";
 import { normalizeWebUrl } from "../validation.ts";
 import {
   byReactionOrder,
@@ -115,9 +115,56 @@ function publicUser(user: AuthUser): PublicUser {
 export function createWishlistService(
   repository: WishlistRepository,
   auth: Auth,
+  secretPepper?: string | undefined,
 ) {
   function bearer(sessionToken: string) {
     return new Headers({ authorization: `Bearer ${sessionToken}` });
+  }
+
+  /** Signs in with a username and password and returns the bearer token. */
+  async function signIn(username: string, password: string) {
+    const signedIn = await auth.api.signInUsername({
+      body: { username, password },
+      returnHeaders: true,
+    });
+    const token = signedIn.headers.get("set-auth-token");
+    if (!token) throw wrongSecret();
+    return {
+      user: publicUser(signedIn.response.user as AuthUser),
+      sessionToken: token,
+    };
+  }
+
+  /**
+   * Accounts created before ADR 0001 kept their secret outside Better Auth and
+   * carry a random password nobody knows. On the first sign-in after the
+   * migration, verify the legacy scrypt hash and copy the same secret into the
+   * Better Auth password, so nobody has to learn a new secret.
+   */
+  async function upgradeLegacyPassword(username: string, password: string) {
+    if (!secretPepper) return false;
+    const lookup = secretLookup(password, secretPepper);
+    const legacy = await repository.findLegacySecret(lookup);
+    if (!legacy) return false;
+    if (
+      !(await verifyUserSecret(
+        password,
+        legacy.secretSalt,
+        legacy.secretHash,
+      ))
+    ) {
+      return false;
+    }
+    // A secret may only upgrade the name it belongs to.
+    const user = await repository.findUserByUsername(username);
+    if (!user || user.id !== legacy.userId) return false;
+    const context = await auth.$context;
+    const passwordHash = await context.password.hash(password);
+    if (!(await repository.setPasswordHash(legacy.userId, passwordHash))) {
+      return false;
+    }
+    await repository.deleteLegacySecret(lookup);
+    return true;
   }
 
   async function sessionUser(sessionToken: string): Promise<PublicUser> {
@@ -296,21 +343,17 @@ export function createWishlistService(
 
     /** Signs in with name + secret and returns a bearer session token. */
     async assume(name: string, secret: string) {
-      const signedIn = await mapWrongSecretTo401(() =>
-        auth.api.signInUsername({
-          body: {
-            username: normalizeUsername(name),
-            password: normalizeUserSecret(secret),
-          },
-          returnHeaders: true,
-        }),
-      );
-      const token = signedIn.headers.get("set-auth-token");
-      if (!token) throw wrongSecret();
-      return {
-        user: publicUser(signedIn.response.user as AuthUser),
-        sessionToken: token,
-      };
+      const username = normalizeUsername(name);
+      const password = normalizeUserSecret(secret);
+      try {
+        return await signIn(username, password);
+      } catch (error) {
+        if (!isWrongSecretError(error)) throw error;
+        if (!(await upgradeLegacyPassword(username, password))) {
+          throw wrongSecret();
+        }
+      }
+      return mapWrongSecretTo401(() => signIn(username, password));
     },
 
     async remove(id: string, sessionToken: string) {

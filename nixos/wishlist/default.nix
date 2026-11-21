@@ -62,6 +62,8 @@ in
       example = "/run/secrets/wishlist.env";
       description = ''
         EnvironmentFile containing TURNSTILE_SECRET and BETTER_AUTH_SECRET.
+        WISHLIST_SECRET_PEPPER belongs there too while accounts created before
+        the Better Auth migration still need their first sign-in.
         A sops-nix template is recommended so secrets are not stored in the Nix store.
       '';
     };

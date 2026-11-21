@@ -112,11 +112,16 @@ resets it directly in the credential store; there is no self-service recovery
 endpoint.
 
 **Migration policy:** the Better Auth migration (`20261121102107_better_auth_username`) keeps every
-existing wish and every existing name. Accounts that existed before it have no
-secret, so they cannot sign in until an administrator sets one in the credential
-store. The earlier migration `20261121033803` already reset wishes from before
-the user-secret model, so a database that has not run it yet loses those wishes
-when it does. Back up the database before deploying either migration.
+existing wish, every existing name, and every existing secret. It renames the
+old `wishlist_secrets` table to `legacy_wishlist_secrets` instead of dropping
+it; on the first sign-in after the upgrade the API verifies that scrypt hash and
+copies the same secret into the Better Auth password, so users keep the secret
+they already have and never see a reset. That path depends on
+`WISHLIST_SECRET_PEPPER`, which production already provides through sops. Once
+the table is drained it can be dropped in a later migration. The earlier
+migration `20261121033803` already reset wishes from before the user-secret
+model, so a database that has not run it yet loses those wishes when it does.
+Back up the database before deploying either migration.
 
 ### Database migrations
 
@@ -164,6 +169,8 @@ frontend configuration.
   the one browser origin allowed to call the API, the Turnstile secret, the
   Better Auth secret (at least 32 characters), and whether client IPs are read
   from proxy headers (enabled behind the Cloudflare Tunnel).
+  `WISHLIST_SECRET_PEPPER` is only needed to upgrade accounts created before the
+  Better Auth migration; it is already in the production sops environment.
 - **`NODE_ENV`** is `development` by default; set `production` for the deployed
   API. In production the API refuses to start without `TURNSTILE_SECRET`, and it
   allows only the configured origin for CORS (no localhost). Seed and clean

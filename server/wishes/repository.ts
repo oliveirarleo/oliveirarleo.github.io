@@ -2,7 +2,7 @@ import { randomUUID } from "node:crypto";
 import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { REACTIONS, type Reaction } from "../../shared/reactions.ts";
 import type { WishlistDatabase } from "../database.ts";
-import { users, wishes, wishReactions } from "../schema.ts";
+import { users, account, wishes, wishReactions } from "../schema.ts";
 
 export const WISH_LIMIT = 100;
 
@@ -33,6 +33,13 @@ export interface PublicWish extends WishRecord {
 }
 
 export class WishLimitReached extends Error {}
+
+/** A row from the pre-Better-Auth secret store (see ADR 0001). */
+export interface LegacySecret {
+  userId: string;
+  secretHash: string;
+  secretSalt: string;
+}
 
 /** The display name, falling back to the stored name. Shared by wishes and users. */
 export function displayName(user: {
@@ -133,6 +140,51 @@ export function createWishlistRepository(db: WishlistDatabase) {
 
     async deleteUser(userId: string) {
       await db.delete(users).where(eq(users.id, userId));
+    },
+
+    /**
+     * Reads the pre-Better-Auth secret store through raw SQL: the renamed table
+     * is a legacy artifact on purpose, so it has no Drizzle schema to drift.
+     */
+    async findLegacySecret(lookup: string): Promise<LegacySecret | null> {
+      try {
+        const row = db.get<LegacySecret>(sql`
+          select user_id as userId,
+                 secret_hash as secretHash,
+                 secret_salt as secretSalt
+          from legacy_wishlist_secrets
+          where secret_lookup = ${lookup}
+          limit 1
+        `);
+        return row ?? null;
+      } catch (error) {
+        // A database that never had the legacy store has nothing to upgrade.
+        if (error instanceof Error && error.message.includes("no such table")) {
+          return null;
+        }
+        throw error;
+      }
+    },
+
+    async deleteLegacySecret(lookup: string) {
+      db.run(
+        sql`delete from legacy_wishlist_secrets where secret_lookup = ${lookup}`,
+      );
+    },
+
+    /** Replaces the password Better Auth verifies for this user. */
+    async setPasswordHash(userId: string, passwordHash: string) {
+      const updated = await db
+        .update(account)
+        .set({ password: passwordHash, updatedAt: new Date() })
+        .where(
+          and(
+            eq(account.userId, userId),
+            eq(account.providerId, "credential"),
+          ),
+        )
+        .returning({ id: account.id });
+      return updated.length > 0;
     },
 
     /**

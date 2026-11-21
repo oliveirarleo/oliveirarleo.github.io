@@ -11,6 +11,7 @@ UPDATE `users` SET `username` = coalesce(`name_key`, lower(trim(`name`))), `disp
 CREATE UNIQUE INDEX `users_username_unique` ON `users` (`username`);--> statement-breakpoint
 DROP INDEX IF EXISTS `users_name_key_idx`;--> statement-breakpoint
 ALTER TABLE `users` DROP COLUMN `name_key`;--> statement-breakpoint
-DROP INDEX IF EXISTS `wishlist_secrets_lookup_idx`;--> statement-breakpoint
-DROP INDEX IF EXISTS `wishlist_secrets_user_id_idx`;--> statement-breakpoint
-DROP TABLE IF EXISTS `wishlist_secrets`;
+-- Keep the pre-Better-Auth secret store so existing accounts keep their original
+-- secret. The API verifies it on the first sign-in and copies the same secret
+-- into the Better Auth password (see ADR 0001). Drop the table once drained.
+ALTER TABLE `wishlist_secrets` RENAME TO `legacy_wishlist_secrets`;

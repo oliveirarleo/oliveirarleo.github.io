@@ -30,6 +30,8 @@ export const envSchema = Schema.Struct({
     Schema.withDecodingDefaultTypeKey(Effect.succeed(false)),
   ),
   TURNSTILE_SECRET: Schema.optional(Schema.NonEmptyString),
+  // Only used to upgrade accounts created before the Better Auth migration.
+  WISHLIST_SECRET_PEPPER: Schema.optional(Schema.NonEmptyString),
 });
 
 type AppConfig = typeof envSchema.Type;
