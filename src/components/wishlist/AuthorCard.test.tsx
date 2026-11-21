@@ -1,7 +1,9 @@
 import { fireEvent, render, screen } from "@solidjs/testing-library";
+import { createSignal } from "solid-js";
 import { describe, expect, it } from "vitest";
 import type { Wish } from "../../lib/wishlist-api";
 import AuthorCard from "./AuthorCard";
+import { applyReaction } from "./reactions";
 
 function wish(overrides: Partial<Wish> = {}): Wish {
   return {
@@ -122,5 +124,64 @@ describe("AuthorCard", () => {
     const reaction = screen.getByRole("button", { name: "Love it: ❤️, 2" });
     expect(reaction.getAttribute("aria-pressed")).toBe("true");
     expect(reaction.textContent).toContain("2");
+  });
+
+  it("keeps the options open after a reaction updates the wish", () => {
+    const [wishes, setWishes] = createSignal([wish()]);
+    render(() => (
+      <AuthorCard
+        group={{ author: "Alice", userId: "user-1", wishes: wishes() }}
+        activeUserId="user-1"
+        removingId={null}
+        onRemove={() => {}}
+        onEdit={() => {}}
+        onReact={(target, emoji) =>
+          setWishes((current) =>
+            applyReaction(current, target.id, "user-1", emoji),
+          )
+        }
+      />
+    ));
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Show options for A really good book",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Love it: ❤️" }));
+
+    // The palette toggled to pressed, and the panel stayed mounted and open.
+    expect(
+      screen
+        .getByRole("button", { name: "Love it: ❤️, 1" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("button", {
+        name: "Hide options for A really good book",
+      }),
+    ).not.toBeNull();
+    expect(
+      document
+        .querySelector("#wish-options-wish-1")
+        ?.classList.contains("collapse-open"),
+    ).toBe(true);
+  });
+
+  it("keeps the options open after choosing an action", () => {
+    renderCard([wish()], "user-1");
+
+    fireEvent.click(
+      screen.getByRole("button", {
+        name: "Show options for A really good book",
+      }),
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Edit" }));
+
+    expect(
+      screen.getByRole("button", {
+        name: "Hide options for A really good book",
+      }),
+    ).not.toBeNull();
   });
 });

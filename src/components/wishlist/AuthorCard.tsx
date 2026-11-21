@@ -1,4 +1,4 @@
-import { For } from "solid-js";
+import { createMemo, For } from "solid-js";
 import type { Reaction } from "../../../shared/reactions";
 import type { Wish } from "../../lib/wishlist-api";
 import WishItem from "./WishItem";
@@ -19,6 +19,11 @@ export default function AuthorCard(props: {
   onReact: (wish: Wish, emoji: Reaction) => void;
 }) {
   const wishCount = () => props.group.wishes.length;
+  // Key rows by id so a new wish object from polling, editing, or reacting
+  // does not remount the row and collapse its options panel.
+  const wishIds = createMemo(() => props.group.wishes.map(({ id }) => id));
+  const wishFor = (id: string) =>
+    props.group.wishes.find((wish) => wish.id === id) as Wish;
 
   return (
     <article class="overflow-hidden rounded-xl border border-[#e3e1d8] bg-white/60 shadow-[0_3px_12px_rgba(34,52,43,0.024)]">
@@ -45,18 +50,21 @@ export default function AuthorCard(props: {
         </div>
       </header>
       <ul class="m-0 px-[23px] pb-2">
-        <For each={props.group.wishes}>
-          {(wish) => (
-            <WishItem
-              wish={wish}
-              isOwner={props.activeUserId === wish.userId}
-              activeUserId={props.activeUserId}
-              removing={props.removingId === wish.id}
-              onEdit={() => props.onEdit(wish)}
-              onRemove={() => props.onRemove(wish)}
-              onReact={(emoji) => props.onReact(wish, emoji)}
-            />
-          )}
+        <For each={wishIds()}>
+          {(wishId) => {
+            const wish = () => wishFor(wishId);
+            return (
+              <WishItem
+                wish={wish()}
+                isOwner={props.activeUserId === wish().userId}
+                activeUserId={props.activeUserId}
+                removing={props.removingId === wish().id}
+                onEdit={() => props.onEdit(wish())}
+                onRemove={() => props.onRemove(wish())}
+                onReact={(emoji) => props.onReact(wish(), emoji)}
+              />
+            );
+          }}
         </For>
       </ul>
     </article>

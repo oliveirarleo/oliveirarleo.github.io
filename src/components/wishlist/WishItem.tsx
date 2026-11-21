@@ -18,18 +18,18 @@ export default function WishItem(props: {
   const optionsId = () => `wish-options-${props.wish.id}`;
 
   return (
-    <li class="group border-t border-[#ebe9e1] py-1.5">
+    <li class="border-t border-[#ebe9e1] py-1.5">
       <div class="flex items-center gap-1">
         <a
           href={props.wish.link}
           target="_blank"
           rel="noopener noreferrer"
           aria-label={`${props.wish.name} (opens in a new tab)`}
-          class="flex min-w-0 flex-1 items-center gap-3 py-2 no-underline"
+          class="group/link flex min-w-0 flex-1 items-center gap-3 py-2 no-underline"
         >
           <WishIcon link={props.wish.link} />
           <span class="min-w-0 flex-1">
-            <span class="block truncate text-[14px] text-[#414b44] transition-colors group-hover:text-secondary">
+            <span class="block truncate text-[14px] text-[#414b44] transition-colors group-hover/link:text-secondary">
               {props.wish.name}
             </span>
             <span class="mt-[3px] block truncate text-[10px] text-[#93978f]">
@@ -40,14 +40,14 @@ export default function WishItem(props: {
             </span>
           </span>
           <ArrowUpRight
-            class="shrink-0 text-[#89978d] transition-[color,transform] group-hover:translate-x-0.5 group-hover:-translate-y-0.5 group-hover:text-secondary"
+            class="shrink-0 text-[#89978d] transition-[color,transform] group-hover/link:translate-x-0.5 group-hover/link:-translate-y-0.5 group-hover/link:text-secondary"
             size={16}
             aria-hidden="true"
           />
         </a>
         <button
           type="button"
-          class="btn btn-circle btn-ghost btn-xs relative shrink-0 text-[#89978d] after:absolute after:-inset-2.5 after:rounded-full after:content-['']"
+          class="btn btn-circle btn-ghost btn-xs relative shrink-0 text-[#89978d] after:absolute after:-inset-4 after:rounded-full after:content-['']"
           aria-expanded={optionsOpen()}
           aria-controls={optionsId()}
           aria-label={`${optionsOpen() ? "Hide" : "Show"} options for ${props.wish.name}`}
@@ -86,7 +86,6 @@ export default function WishItem(props: {
                   type="button"
                   class="btn btn-ghost btn-xs h-6 min-h-0 rounded-full px-2 text-[11px] text-[#68736b]"
                   onClick={() => {
-                    setOptionsOpen(false);
                     props.onEdit();
                   }}
                 >
@@ -98,7 +97,6 @@ export default function WishItem(props: {
                   class="btn btn-ghost btn-xs h-6 min-h-0 rounded-full px-2 text-[11px] text-error"
                   disabled={props.removing}
                   onClick={() => {
-                    setOptionsOpen(false);
                     props.onRemove();
                   }}
                 >
