@@ -113,7 +113,10 @@ const post = [
             <Image
               transition:name={`img-${post.id}`}
               transition:animate="initial"
-              fetchpriority="low"
+              fetchpriority="high"
+              loading="eager"
+              widths={[480, 720, 960, 1440]}
+              sizes="(max-width: 720px) calc(100vw - 3em), 720px"
               width={720}
               height={360}
               src={post.data.heroImage}

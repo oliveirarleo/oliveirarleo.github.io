@@ -12,7 +12,7 @@
         devShells.default = with pkgs; pkgs.mkShellNoCC {
           buildInputs = [
             musl
-            nodejs_22
+            nodejs_26
             pnpm
           ];
         };

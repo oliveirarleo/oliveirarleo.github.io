@@ -3,18 +3,31 @@
 // all pages through the use of the <BaseHead /> component.
 import "../styles/global.css";
 
+import { getImage } from "astro:assets";
 import { ClientRouter } from "astro:transitions";
+import type { ImageMetadata } from "astro";
 
 interface Props {
   title: string;
   description: string;
-  image?: string;
+  image?: ImageMetadata | string;
 }
 
 const canonicalURL = new URL(Astro.url.pathname, Astro.site);
 
-// TODO: fix placeholder
-const { title, description, image = "/placeholder.jpg" } = Astro.props;
+const { title, description, image = "/pwa-512x512.png" } = Astro.props;
+const socialImage =
+  typeof image === "string"
+    ? image
+    : (
+        await getImage({
+          src: image,
+          width: 1200,
+          height: 630,
+          format: "jpeg",
+          quality: 80,
+        })
+      ).src;
 ---
 
 <!-- Global Metadata -->
@@ -31,13 +44,7 @@ const { title, description, image = "/placeholder.jpg" } = Astro.props;
   rel="preload"
   href="/fonts/recursive.woff2"
   as="font"
-  type="font/woff"
-  crossorigin
-/>
-<link
-  href="/fonts/recursive-latin-1.woff2"
-  as="font"
-  type="font/woff"
+  type="font/woff2"
   crossorigin
 />
 
@@ -54,13 +61,13 @@ const { title, description, image = "/placeholder.jpg" } = Astro.props;
 <meta property="og:url" content={Astro.url} />
 <meta property="og:title" content={title} />
 <meta property="og:description" content={description} />
-<meta property="og:image" content={new URL(image, Astro.url)} />
+<meta property="og:image" content={new URL(socialImage, Astro.url)} />
 
 <!-- Twitter -->
 <meta property="twitter:card" content="summary_large_image" />
 <meta property="twitter:url" content={Astro.url} />
 <meta property="twitter:title" content={title} />
 <meta property="twitter:description" content={description} />
-<meta property="twitter:image" content={new URL(image, Astro.url)} />
+<meta property="twitter:image" content={new URL(socialImage, Astro.url)} />
 
 <link rel="manifest" href="/manifest.webmanifest">

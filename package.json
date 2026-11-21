@@ -2,6 +2,10 @@
   "name": "blog",
   "type": "module",
   "version": "1.0.0",
+  "packageManager": "pnpm@12.9.0",
+  "engines": {
+    "node": ">=26"
+  },
   "scripts": {
     "test": "pnpm biome check . --fix",
     "dev": "astro dev",

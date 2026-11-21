@@ -13,7 +13,7 @@ const { id, title, description, pubDate, updatedDate, heroImage } = Astro.props;
 
 <html lang="en">
   <head>
-    <BaseHead title={title} description={description} />
+    <BaseHead title={title} description={description} image={heroImage} />
     <style>
       main {
         width: calc(100% - 2em);
@@ -65,11 +65,14 @@ const { id, title, description, pubDate, updatedDate, heroImage } = Astro.props;
               <Image
                 transition:name={`img-${id}`}
                 transition:animate="initial"
-                fetchpriority="low"
+                fetchpriority="high"
+                loading="eager"
+                widths={[480, 768, 1020, 1440]}
+                sizes="(max-width: 1060px) calc(100vw - 2em), 1020px"
                 width={1020}
                 height={510}
                 src={heroImage}
-                alt="The cover image for the blog post"
+                alt={`Cover image for ${title}`}
               />
             )
           }
