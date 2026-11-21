@@ -1,8 +1,8 @@
 import { randomUUID } from "node:crypto";
 import { and, asc, count, eq, inArray, sql } from "drizzle-orm";
 import { REACTIONS, type Reaction } from "../../shared/reactions.ts";
-import type { WishlistDatabase } from "../database.ts";
-import { users, account, wishes, wishReactions } from "../schema.ts";
+import { isMissingTable, type WishlistDatabase } from "../database.ts";
+import { account, users, wishes, wishReactions } from "../schema.ts";
 
 export const WISH_LIMIT = 100;
 
@@ -159,9 +159,7 @@ export function createWishlistRepository(db: WishlistDatabase) {
         return row ?? null;
       } catch (error) {
         // A database that never had the legacy store has nothing to upgrade.
-        if (error instanceof Error && error.message.includes("no such table")) {
-          return null;
-        }
+        if (isMissingTable(error)) return null;
         throw error;
       }
     },
@@ -178,10 +176,7 @@ export function createWishlistRepository(db: WishlistDatabase) {
         .update(account)
         .set({ password: passwordHash, updatedAt: new Date() })
         .where(
-          and(
-            eq(account.userId, userId),
-            eq(account.providerId, "credential"),
-          ),
+          and(eq(account.userId, userId), eq(account.providerId, "credential")),
         )
         .returning({ id: account.id });
       return updated.length > 0;

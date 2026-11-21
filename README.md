@@ -107,9 +107,23 @@ be polled without a session.
 
 Six characters from 34 symbols give about 30.5 bits of entropy, about 1.54
 billion possibilities. Sign-in attempts have strict per-IP and global rate limits and
-require Turnstile when it is configured. Losing a secret means an administrator
-resets it directly in the credential store; there is no self-service recovery
-endpoint.
+require Turnstile when it is configured. There is no self-service recovery
+endpoint: a lost secret is reset by an administrator on the API host, which
+prints a new code once.
+
+### Resetting a user code
+
+```sh
+just reset-code leonardo          # dry run: resolves the name, writes nothing
+just reset-code leonardo --yes    # installs a new code and prints it
+just reset-code leonardo --yes --secret ABC234
+```
+
+The script replaces the Better Auth password, revokes that user's sessions, and
+deletes any leftover `legacy_wishlist_secrets` row. It runs one transaction and
+never touches the schema, so it is safe while the API is running. The printed
+code is the only copy: hand it over privately. Use `--db <path>` to target
+another database.
 
 **Migration policy:** the Better Auth migration (`20261121102107_better_auth_username`) keeps every
 existing wish, every existing name, and every existing secret. It renames the

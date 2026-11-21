@@ -59,7 +59,8 @@ Trade-offs we are accepting:
   anything sensitive.
 - **Placeholder email.** Better Auth's schema needs an email, so one is
   synthesized. Account recovery by email is impossible; recovery is an
-  administrator reset in the credential store.
+  administrator reset in the credential store (`just reset-code <name> --yes`,
+  which prints the new secret once).
 - **A new name is signed in on the device that registered it.** The secret is
   returned in the same response, and the browser keeps it for the owner.
 - **Migration:** the Better Auth migration (`20261121102107_better_auth_username`)

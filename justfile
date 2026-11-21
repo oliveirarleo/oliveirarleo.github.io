@@ -65,6 +65,10 @@ seed:
 clean:
     node --env-file-if-exists=.env --env-file-if-exists=.dev.env scripts/clean-dev.ts
 
+# Reset a user's code (dry run unless --yes); prints the new code once
+reset-code user *args:
+    node scripts/reset-code.ts {{user}} {{args}}
+
 # Build the static site
 build:
     pnpm build
