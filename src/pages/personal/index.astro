@@ -106,7 +106,13 @@ const posts = (await getCollection("personal")).sort(
                     src={post.data.heroImage}
                     alt=""
                   />
-                  <h4 class="title">{post.data.title}</h4>
+                  <h4
+                    class="title"
+                    transition:name={`title-${post.id}`}
+                    transition:animate="initial"
+                  >
+                    {post.data.title}
+                  </h4>
                   <p class="date">
                     <FormattedDate date={post.data.pubDate} />
                   </p>
