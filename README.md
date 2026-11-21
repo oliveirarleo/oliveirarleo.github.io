@@ -85,18 +85,25 @@ just clean       # remove every wish and author from the dev database
 The API reads its configuration once at startup and fails fast with a clear
 error when a value is missing or invalid.
 
-Anyone can list the wishes (in pages), add a wish, and sign in with a name and
-secret. The owner of a name can rotate its secret and remove that name's wishes;
-nobody else can. A health check reports whether the database is reachable. GET
-responses never expose secrets, password hashes, placeholder emails, or account
-details.
+Anyone can list the wishes (in pages) and add a wish. Signed-in users can
+react to any wish; the owner of a name can edit or remove that name's wishes and
+rotate its secret. Nobody else can. A health check reports whether the database
+is reachable. GET responses never expose secrets, password hashes, placeholder
+emails, or account details.
 
 The first wish for a name creates a Better Auth user and a six-character
 secret. The secret uses 34 symbols: the capital letters A–Z and the digits
 2–9 (no 0 or 1, to avoid ambiguity). The browser keeps known secrets in local storage
 so the owner can manage wishes from the same device, show the secret again, and
 forget it. The same secret signs the user in on another browser, where it can add
-wishes, rotate the secret, and remove only that user's wishes.
+and edit wishes, react, rotate the secret, and remove only that user's wishes.
+
+**Editing and reactions.** `PATCH /api/wishes/:id` edits the name and link, and
+only the owner's session is accepted. `PUT /api/wishes/:id/reaction` sets the
+caller's single reaction (`DELETE` clears it, and changing emoji replaces the
+old one). The palette is fixed in `shared/reactions.ts`, and reaction summaries
+include the user ids that chose each emoji, so the list stays anonymous and can
+be polled without a session.
 
 Six characters from 34 symbols give about 30.5 bits of entropy, about 1.54
 billion possibilities. Sign-in attempts have strict per-IP and global rate limits and

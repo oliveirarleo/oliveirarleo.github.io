@@ -31,3 +31,5 @@ export function createRateLimiter({
     },
   };
 }
+
+export type RateLimiter = ReturnType<typeof createRateLimiter>;

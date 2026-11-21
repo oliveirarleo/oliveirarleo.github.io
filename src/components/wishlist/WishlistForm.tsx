@@ -1,13 +1,12 @@
-import { ArrowRight, Link2 } from "lucide-solid";
+import { ArrowRight } from "lucide-solid";
 import { createSignal, Show } from "solid-js";
 import type { StoredUser } from "../../lib/user-secrets";
 import type { CreateWishInput } from "../../lib/wishlist-api";
 import type { TurnstileFieldHandle } from "./TurnstileField";
 import TurnstileField from "./TurnstileField";
 import { readTurnstileToken, turnstileTokenMissing } from "./turnstile-token";
-
-const labelClass =
-  "mt-[17px] mb-1.5 block text-[12px] font-semibold text-[#43564c]";
+import WishFields, { wishLabelClass } from "./WishFields";
+import { INVALID_LINK_MESSAGE, validWishLink } from "./wish-link";
 
 export default function WishlistForm(props: {
   activeUser: StoredUser | null;
@@ -25,21 +24,10 @@ export default function WishlistForm(props: {
     event.preventDefault();
     if (!form?.reportValidity()) return;
     const data = new FormData(form);
-    const linkInput = form.querySelector<HTMLInputElement>("#link");
+    const linkInput = form.querySelector<HTMLInputElement>('[name="link"]');
     const link = String(data.get("link")).trim();
-    try {
-      const url = new URL(link);
-      if (
-        (url.protocol !== "https:" && url.protocol !== "http:") ||
-        url.username ||
-        url.password
-      ) {
-        throw new Error();
-      }
-    } catch {
-      linkInput?.setCustomValidity(
-        "Enter a valid http or https link without credentials.",
-      );
+    if (!validWishLink(link)) {
+      linkInput?.setCustomValidity(INVALID_LINK_MESSAGE);
       form.reportValidity();
       return;
     }
@@ -65,7 +53,7 @@ export default function WishlistForm(props: {
     turnstile?.reset();
     if (created) {
       form.reset();
-      form.querySelector<HTMLInputElement>("#name")?.focus();
+      form.querySelector<HTMLInputElement>('[name="name"]')?.focus();
       props.onCreated?.();
     }
   }
@@ -84,7 +72,7 @@ export default function WishlistForm(props: {
       }}
     >
       <Show when={!props.activeUser}>
-        <label class={labelClass} for="author">
+        <label class={wishLabelClass} for="author">
           Your name
         </label>
         <input
@@ -99,38 +87,7 @@ export default function WishlistForm(props: {
         />
       </Show>
 
-      <label class={labelClass} for="name">
-        What are you wishing for?
-      </label>
-      <input
-        id="name"
-        name="name"
-        type="text"
-        class="input h-[43px] w-full bg-white text-[13px] text-[#35483e] placeholder:text-[#9aa39b] focus:outline-none focus:border-[#779083] focus:shadow-[0_0_0_3px_#355a4a17]"
-        placeholder="e.g. A really good book"
-        maxlength="120"
-        required
-      />
-
-      <label class={labelClass} for="link">
-        Gift link
-      </label>
-      <label class="input flex h-[43px] w-full items-center gap-2 bg-white px-3 text-[13px] text-[#35483e] focus-within:outline-none focus-within:border-[#779083] focus-within:shadow-[0_0_0_3px_#355a4a17]">
-        <Link2 size={16} aria-hidden="true" class="shrink-0 text-[#98a19a]" />
-        <input
-          id="link"
-          name="link"
-          type="url"
-          class="grow bg-transparent text-[13px] text-[#35483e] placeholder:text-[#9aa39b] focus:outline-none"
-          placeholder="https://..."
-          inputmode="url"
-          maxlength="2000"
-          required
-        />
-      </label>
-      <p class="mt-1.5 mb-5 text-[10px] text-[#989c95]">
-        Add a link to help your gift-giver find it.
-      </p>
+      <WishFields idPrefix="create-wish" />
 
       <TurnstileField
         handleRef={(handle) => (turnstile = handle)}

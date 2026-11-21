@@ -7,8 +7,9 @@ import {
   SECRET_PATTERN,
   validUserSecret,
 } from "../../lib/user-secrets";
-import { alertTone } from "./alertTone";
 import DialogClose from "./DialogClose";
+import type { Notice } from "./notice";
+import StatusAlert from "./StatusAlert";
 import type { TurnstileFieldHandle } from "./TurnstileField";
 import TurnstileField from "./TurnstileField";
 import { readTurnstileToken, turnstileTokenMissing } from "./turnstile-token";
@@ -16,8 +17,7 @@ import { readTurnstileToken, turnstileTokenMissing } from "./turnstile-token";
 export default function UserSession(props: {
   activeUser: StoredUser | null;
   knownUsers: StoredUser[];
-  status: string;
-  statusHasError: boolean;
+  notice: Notice | null;
   turnstileSiteKey?: string | undefined;
   onAssume: (name: string, secret: string, token: string) => Promise<boolean>;
   onSelect: (userId: string) => void;
@@ -233,16 +233,15 @@ export default function UserSession(props: {
                 handleRef={(handle) => (turnstile = handle)}
                 siteKey={props.turnstileSiteKey}
               />
-              <Show when={formError() || props.status}>
-                <div
-                  class="alert alert-soft text-sm"
-                  classList={alertTone(
-                    Boolean(formError()) || props.statusHasError,
-                  )}
-                  role="status"
-                >
-                  {formError() || props.status}
-                </div>
+              <Show when={formError() || props.notice}>
+                <StatusAlert
+                  notice={
+                    formError()
+                      ? { text: formError(), tone: "error" }
+                      : (props.notice as Notice)
+                  }
+                  class="mt-3"
+                />
               </Show>
               <div class="modal-action">
                 <button
@@ -326,14 +325,15 @@ export default function UserSession(props: {
                   handleRef={(handle) => (rotateTurnstile = handle)}
                   siteKey={props.turnstileSiteKey}
                 />
-                <Show when={copyMessage() || props.status}>
-                  <div
-                    class="alert alert-soft mt-3 text-sm"
-                    classList={alertTone(props.statusHasError)}
-                    role="status"
-                  >
-                    {copyMessage() || props.status}
-                  </div>
+                <Show when={copyMessage() || props.notice}>
+                  <StatusAlert
+                    notice={
+                      copyMessage()
+                        ? { text: copyMessage(), tone: "info" }
+                        : (props.notice as Notice)
+                    }
+                    class="mt-3"
+                  />
                 </Show>
                 <div class="mt-3 flex flex-nowrap items-center justify-end gap-0.5">
                   <button

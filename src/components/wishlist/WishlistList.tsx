@@ -1,15 +1,20 @@
 import { createEffect, createMemo, createSignal, For } from "solid-js";
-import type { Wish } from "../../lib/wishlist-api";
+import type { Reaction } from "../../../shared/reactions";
+import type { Wish, WishDraft } from "../../lib/wishlist-api";
 import type { WishGroup } from "./AuthorCard";
 import AuthorCard from "./AuthorCard";
 import DialogClose from "./DialogClose";
+import WishEditor from "./WishEditor";
 
 export default function WishlistList(props: {
   wishes: Wish[];
   activeUserId: string | undefined;
   onRemove: (wish: Wish) => Promise<boolean>;
+  onEdit: (wish: Wish, draft: WishDraft) => Promise<boolean>;
+  onReact: (wish: Wish, emoji: Reaction) => void;
 }) {
   const [pending, setPending] = createSignal<Wish | null>(null);
+  const [editing, setEditing] = createSignal<Wish | null>(null);
   const [removingId, setRemovingId] = createSignal<string | null>(null);
   let dialog: HTMLDialogElement | undefined;
   const groups = createMemo<WishGroup[]>(() => {
@@ -28,6 +33,13 @@ export default function WishlistList(props: {
     return [...grouped.values()];
   });
 
+  // Key the cards by user id, not by group object: until the next refresh the
+  // group object is new, but the id keeps the same AuthorCard (and its open
+  // disclosure) mounted across polls, edits, and reactions.
+  const groupIds = createMemo(() => groups().map(({ userId }) => userId));
+  const groupFor = (userId: string) =>
+    groups().find((group) => group.userId === userId) as WishGroup;
+
   createEffect(() => {
     if (pending() && !dialog?.open) dialog?.showModal();
   });
@@ -45,18 +57,25 @@ export default function WishlistList(props: {
   return (
     <>
       <div class="grid gap-[17px]">
-        <For each={groups()}>
-          {(group, index) => (
+        <For each={groupIds()}>
+          {(userId, index) => (
             <AuthorCard
-              group={group}
+              group={groupFor(userId)}
               activeUserId={props.activeUserId}
               removingId={removingId()}
               alternate={index() % 2 === 1}
               onRemove={(wish) => setPending(wish)}
+              onEdit={(wish) => setEditing(wish)}
+              onReact={props.onReact}
             />
           )}
         </For>
       </div>
+      <WishEditor
+        wish={editing()}
+        onSave={props.onEdit}
+        onClose={() => setEditing(null)}
+      />
       <dialog
         ref={dialog}
         class="modal"

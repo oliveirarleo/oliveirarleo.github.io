@@ -34,6 +34,7 @@ export const verifyTurnstile = (
       catch: () =>
         new HttpError({
           status: 502,
+          code: "turnstile_unavailable",
           message: "Verification is temporarily unavailable.",
         }),
     }),
@@ -42,6 +43,10 @@ export const verifyTurnstile = (
       result.action === "wishlist" &&
       result.hostname === expectedHostname
         ? Effect.void
-        : jsonError(400, "Verification failed. Please try again."),
+        : jsonError(
+            400,
+            "turnstile_failed",
+            "Verification failed. Please try again.",
+          ),
     ),
   );

@@ -1,3 +1,12 @@
+import type { ApiErrorCode } from "../../shared/api-errors.ts";
+import { isApiErrorCode } from "../../shared/api-errors.ts";
+import type { Reaction } from "../../shared/reactions.ts";
+
+export interface WishReaction {
+  emoji: Reaction;
+  userIds: string[];
+}
+
 export interface Wish {
   id: string;
   userId: string;
@@ -5,6 +14,10 @@ export interface Wish {
   name: string;
   link: string;
   createdAt: string;
+  /** Null until the owner first edits the wish. */
+  updatedAt: string | null;
+  /** One summary per emoji currently in use. */
+  reactions: WishReaction[];
 }
 
 export interface WishlistUser {
@@ -12,10 +25,13 @@ export interface WishlistUser {
   name: string;
 }
 
-export interface CreateWishInput {
-  author: string;
+export interface WishDraft {
   name: string;
   link: string;
+}
+
+export interface CreateWishInput extends WishDraft {
+  author: string;
   turnstileToken: string;
 }
 
@@ -38,19 +54,28 @@ interface RotateResponse {
   sessionToken: string;
 }
 
-/** A failed API call. Keeps the HTTP status so a rejected session can be told apart. */
+interface WishResponse {
+  wish: Wish;
+}
+
+/** A failed API call. Keeps the stable code and the HTTP status. */
 export class ApiError extends Error {
   readonly status: number;
+  readonly code: ApiErrorCode;
 
-  constructor(message: string, status: number) {
+  constructor(message: string, status: number, code: ApiErrorCode) {
     super(message);
     this.status = status;
+    this.code = code;
   }
 }
 
-/** True when the server rejected the bearer session, so the stored token is dead. */
+/**
+ * True only when the server rejected the bearer session. Using the error code
+ * (not the status) leaves 401 free for a wrong secret during rotation.
+ */
 export function isSessionRejection(error: unknown) {
-  return error instanceof ApiError && error.status === 401;
+  return error instanceof ApiError && error.code === "session_expired";
 }
 
 export function createWishlistApi(baseUrl: string) {
@@ -68,13 +93,18 @@ export function createWishlistApi(baseUrl: string) {
         signal: controller.signal,
       });
       const payload = (await response.json().catch(() => ({}))) as T & {
-        error?: string;
+        error?: { code?: unknown; message?: unknown };
       };
-      if (!response.ok)
+      if (!response.ok) {
+        const failure = payload.error;
         throw new ApiError(
-          payload.error ?? "Something went wrong. Please try again.",
+          typeof failure?.message === "string"
+            ? failure.message
+            : "Something went wrong. Please try again.",
           response.status,
+          isApiErrorCode(failure?.code) ? failure.code : "internal",
         );
+      }
       return payload;
     } catch (error) {
       if (error instanceof DOMException && error.name === "AbortError") {
@@ -102,7 +132,10 @@ export function createWishlistApi(baseUrl: string) {
   });
 
   return {
-    list: () => request<{ wishes: Wish[] }>("/api/wishes"),
+    list: (limit = 500) =>
+      request<{ wishes: Wish[] }>(
+        `/api/wishes?limit=${encodeURIComponent(String(limit))}`,
+      ),
     create: (input: CreateWishInput & { sessionToken?: string }) => {
       const { sessionToken, ...body } = input;
       return request<CreateWishResponse>(
@@ -110,15 +143,30 @@ export function createWishlistApi(baseUrl: string) {
         json("POST", body, sessionToken),
       );
     },
+    update: (wishId: string, draft: WishDraft, sessionToken: string) =>
+      request<WishResponse>(
+        `/api/wishes/${encodeURIComponent(wishId)}`,
+        json("PATCH", draft, sessionToken),
+      ),
+    remove: (wishId: string, sessionToken: string) =>
+      request<{ ok: true }>(
+        `/api/wishes/${encodeURIComponent(wishId)}`,
+        json("DELETE", undefined, sessionToken),
+      ),
+    setReaction: (wishId: string, emoji: Reaction, sessionToken: string) =>
+      request<WishResponse>(
+        `/api/wishes/${encodeURIComponent(wishId)}/reaction`,
+        json("PUT", { emoji }, sessionToken),
+      ),
+    clearReaction: (wishId: string, sessionToken: string) =>
+      request<WishResponse>(
+        `/api/wishes/${encodeURIComponent(wishId)}/reaction`,
+        json("DELETE", undefined, sessionToken),
+      ),
     assume: (name: string, secret: string, turnstileToken: string) =>
       request<AssumeResponse>(
         "/api/session",
         json("POST", { name, secret, turnstileToken }),
-      ),
-    remove: (wish: Wish, sessionToken: string) =>
-      request<{ ok: true }>(
-        `/api/wishes/${encodeURIComponent(wish.id)}`,
-        json("DELETE", undefined, sessionToken),
       ),
     rotate: ({
       sessionToken,
@@ -135,3 +183,5 @@ export function createWishlistApi(baseUrl: string) {
       ),
   };
 }
+
+export type WishlistApi = ReturnType<typeof createWishlistApi>;

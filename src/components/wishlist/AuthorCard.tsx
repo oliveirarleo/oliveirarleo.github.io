@@ -1,4 +1,5 @@
 import { For } from "solid-js";
+import type { Reaction } from "../../../shared/reactions";
 import type { Wish } from "../../lib/wishlist-api";
 import WishItem from "./WishItem";
 
@@ -14,6 +15,8 @@ export default function AuthorCard(props: {
   removingId: string | null;
   alternate?: boolean;
   onRemove: (wish: Wish) => void;
+  onEdit: (wish: Wish) => void;
+  onReact: (wish: Wish, emoji: Reaction) => void;
 }) {
   const wishCount = () => props.group.wishes.length;
 
@@ -51,9 +54,12 @@ export default function AuthorCard(props: {
             {(wish) => (
               <WishItem
                 wish={wish}
-                canRemove={props.activeUserId === wish.userId}
+                isOwner={props.activeUserId === wish.userId}
+                activeUserId={props.activeUserId}
                 removing={props.removingId === wish.id}
+                onEdit={() => props.onEdit(wish)}
                 onRemove={() => props.onRemove(wish)}
+                onReact={(emoji) => props.onReact(wish, emoji)}
               />
             )}
           </For>

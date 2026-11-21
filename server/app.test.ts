@@ -43,6 +43,50 @@ function deleteWish(app: TestApp, id: string, sessionToken: string) {
   });
 }
 
+function patchWish(
+  app: TestApp,
+  id: string,
+  value: unknown,
+  sessionToken?: string,
+) {
+  return app.request(`/api/wishes/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...ip,
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+    },
+    body: JSON.stringify(value),
+  });
+}
+
+function putReaction(
+  app: TestApp,
+  id: string,
+  emoji: unknown,
+  sessionToken?: string,
+) {
+  return app.request(`/api/wishes/${encodeURIComponent(id)}/reaction`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+      ...ip,
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+    },
+    body: JSON.stringify({ emoji }),
+  });
+}
+
+function deleteReaction(app: TestApp, id: string, sessionToken?: string) {
+  return app.request(`/api/wishes/${encodeURIComponent(id)}/reaction`, {
+    method: "DELETE",
+    headers: {
+      ...ip,
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
+    },
+  });
+}
+
 function postWish(
   app: TestApp,
   wish: Record<string, string>,
@@ -266,7 +310,7 @@ it("the wishlist refuses wishes past the shared limit", async () => {
     turnstileToken: "",
   });
   expect(overflow.status).toBe(409);
-  expect((await overflow.json()).error).toMatch(/full/);
+  expect((await overflow.json()).error.message).toMatch(/full/);
   expect(
     (await (await app.request("/api/wishes?limit=1000")).json()).wishes.length,
   ).toBe(WISH_LIMIT);
@@ -292,7 +336,7 @@ it("a rejected wish does not strand a brand-new name", async () => {
     turnstileToken: "",
   });
   expect(again.status).toBe(409);
-  expect((await again.json()).error).toMatch(/full/);
+  expect((await again.json()).error.message).toMatch(/full/);
   app.close();
 });
 
@@ -547,4 +591,120 @@ it("client IPs are only read from proxy headers when trusted", async () => {
     ).status,
   ).toBe(429);
   untrusted.close();
+});
+
+it("an owner can edit a wish, and only the owner", async () => {
+  const app = testApp();
+  const leo = await registerName(app, "Leo", "Book");
+  const leoSession = (await (await signIn(app, "Leo", leo.secret)).json())
+    .sessionToken as string;
+  const ana = await registerName(app, "Ana", "Socks");
+  const anaSession = (await (await signIn(app, "Ana", ana.secret)).json())
+    .sessionToken as string;
+
+  const updated = await patchWish(
+    app,
+    leo.wish.id,
+    { name: "A better book", link: "https://example.com/better" },
+    leoSession,
+  );
+  expect(updated.status).toBe(200);
+  const body = await updated.json();
+  expect(body.wish.name).toBe("A better book");
+  expect(body.wish.link).toBe("https://example.com/better");
+  expect(typeof body.wish.updatedAt).toBe("string");
+  expect(body.wish.reactions).toEqual([]);
+
+  // Another signed-in user cannot edit someone else's wish.
+  expect(
+    (
+      await patchWish(
+        app,
+        leo.wish.id,
+        { name: "Hijack", link: "https://example.com" },
+        anaSession,
+      )
+    ).status,
+  ).toBe(404);
+  expect(
+    (
+      await patchWish(app, leo.wish.id, {
+        name: "No session",
+        link: "https://example.com",
+      })
+    ).status,
+  ).toBe(401);
+
+  const invalid = await patchWish(
+    app,
+    leo.wish.id,
+    { name: "Bad", link: "javascript:alert(1)" },
+    leoSession,
+  );
+  expect(invalid.status).toBe(400);
+  expect((await invalid.json()).error.code).toBe("invalid_link");
+  app.close();
+});
+
+it("reactions are one per user per wish and can be cleared", async () => {
+  const app = testApp();
+  const leo = await registerName(app, "Leo", "Book");
+  const ana = await registerName(app, "Ana", "Socks");
+  const leoSession = (await (await signIn(app, "Leo", leo.secret)).json())
+    .sessionToken as string;
+  const anaSession = (await (await signIn(app, "Ana", ana.secret)).json())
+    .sessionToken as string;
+
+  const first = await putReaction(app, leo.wish.id, "❤️", anaSession);
+  expect(first.status).toBe(200);
+  expect((await first.json()).wish.reactions).toEqual([
+    { emoji: "❤️", userIds: [ana.user.id] },
+  ]);
+
+  // Changing emoji replaces the user's old reaction.
+  const replaced = await putReaction(app, leo.wish.id, "🧦", anaSession);
+  expect((await replaced.json()).wish.reactions).toEqual([
+    { emoji: "🧦", userIds: [ana.user.id] },
+  ]);
+
+  await putReaction(app, leo.wish.id, "❤️", leoSession);
+  const listed = await (await app.request("/api/wishes")).json();
+  const listedWish = listed.wishes.find(
+    (wish: { id: string }) => wish.id === leo.wish.id,
+  );
+  expect(listedWish.reactions).toEqual([
+    { emoji: "❤️", userIds: [leo.user.id] },
+    { emoji: "🧦", userIds: [ana.user.id] },
+  ]);
+
+  const cleared = await deleteReaction(app, leo.wish.id, anaSession);
+  expect((await cleared.json()).wish.reactions).toEqual([
+    { emoji: "❤️", userIds: [leo.user.id] },
+  ]);
+
+  const invalid = await putReaction(app, leo.wish.id, "🍕", leoSession);
+  expect(invalid.status).toBe(400);
+  expect((await invalid.json()).error.code).toBe("invalid_reaction");
+  expect((await putReaction(app, "missing", "❤️", leoSession)).status).toBe(404);
+  expect((await putReaction(app, leo.wish.id, "❤️")).status).toBe(401);
+  app.close();
+});
+
+it("API failures use the shared error envelope", async () => {
+  const app = testApp();
+  const notFound = await app.request("/api/nope");
+  expect(notFound.status).toBe(404);
+  expect(await notFound.json()).toMatchObject({
+    error: { code: "not_found" },
+  });
+
+  const wrongType = await app.request("/api/session", {
+    method: "POST",
+    body: "secret",
+  });
+  expect(wrongType.status).toBe(415);
+  expect(await wrongType.json()).toMatchObject({
+    error: { code: "unsupported_media_type" },
+  });
+  app.close();
 });

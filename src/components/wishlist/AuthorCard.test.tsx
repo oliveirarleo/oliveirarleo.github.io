@@ -11,17 +11,24 @@ function wish(overrides: Partial<Wish> = {}): Wish {
     name: "A really good book",
     link: "https://example.com/book",
     createdAt: "2026-11-21T10:00:00.000Z",
+    updatedAt: null,
+    reactions: [],
     ...overrides,
   };
 }
 
-function renderCard(wishes: Wish[]) {
+function renderCard(
+  wishes: Wish[],
+  activeUserId: string | undefined = undefined,
+) {
   return render(() => (
     <AuthorCard
       group={{ author: "Alice", userId: "user-1", wishes }}
-      activeUserId={undefined}
+      activeUserId={activeUserId}
       removingId={null}
       onRemove={() => {}}
+      onEdit={() => {}}
+      onReact={() => {}}
     />
   ));
 }
@@ -59,5 +66,42 @@ describe("AuthorCard", () => {
     expect(
       screen.getByRole("link", { name: "Warm socks (opens in a new tab)" }),
     ).not.toBeNull();
+  });
+
+  it("shows owner controls and the reaction palette only when signed in", () => {
+    const { unmount } = renderCard([wish()]);
+
+    expect(
+      screen.queryByRole("button", { name: "Edit A really good book" }),
+    ).toBeNull();
+    expect(
+      (screen.getByRole("button", { name: "Love it: ❤️" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
+    unmount();
+
+    renderCard([wish()], "user-1");
+    expect(
+      screen.getByRole("button", { name: "Edit A really good book" }),
+    ).not.toBeNull();
+    expect(
+      (screen.getByRole("button", { name: "Love it: ❤️" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(false);
+  });
+
+  it("summarises reactions and marks the active user's own", () => {
+    renderCard(
+      [
+        wish({
+          reactions: [{ emoji: "❤️", userIds: ["user-1", "user-2"] }],
+        }),
+      ],
+      "user-1",
+    );
+
+    const reaction = screen.getByRole("button", { name: "Love it: ❤️, 2" });
+    expect(reaction.getAttribute("aria-pressed")).toBe("true");
+    expect(reaction.textContent).toContain("2");
   });
 });

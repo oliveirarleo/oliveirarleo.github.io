@@ -1,17 +1,17 @@
 import { Gift } from "lucide-solid";
 import { Show } from "solid-js";
-import { alertTone } from "./alertTone";
+import type { CreateWishInput } from "../../lib/wishlist-api";
+import StatusAlert from "./StatusAlert";
 import UserSession from "./UserSession";
-import type { useWishlist } from "./useWishlist";
+import type { WishlistSession } from "./useSession";
 import WishlistForm from "./WishlistForm";
 
 export default function AddWishPanel(props: {
-  wishlist: ReturnType<typeof useWishlist>;
+  session: WishlistSession;
+  createWish: (input: CreateWishInput) => Promise<boolean>;
   turnstileSiteKey?: string | undefined;
   onCreated?: (() => void) | undefined;
 }) {
-  const wishlist = props.wishlist;
-
   return (
     <>
       <div
@@ -37,32 +37,25 @@ export default function AddWishPanel(props: {
       </div>
 
       <UserSession
-        activeUser={wishlist.activeUser()}
-        knownUsers={wishlist.knownUsers()}
-        status={wishlist.status()}
-        statusHasError={wishlist.statusHasError()}
+        activeUser={props.session.activeUser()}
+        knownUsers={props.session.knownUsers()}
+        notice={props.session.notice()}
         turnstileSiteKey={props.turnstileSiteKey}
-        onAssume={wishlist.assume}
-        onSelect={wishlist.selectUser}
-        onSwitch={wishlist.switchUser}
-        onForget={wishlist.forget}
-        onRotate={wishlist.rotate}
+        onAssume={props.session.assume}
+        onSelect={props.session.selectUser}
+        onSwitch={props.session.switchUser}
+        onForget={props.session.forget}
+        onRotate={props.session.rotate}
       />
       <WishlistForm
-        activeUser={wishlist.activeUser()}
+        activeUser={props.session.activeUser()}
         turnstileSiteKey={props.turnstileSiteKey}
-        onCreate={wishlist.createWish}
-        onInput={() => wishlist.report("")}
+        onCreate={props.createWish}
+        onInput={props.session.clearNotice}
         onCreated={props.onCreated}
       />
-      <Show when={wishlist.status()}>
-        <div
-          class="alert alert-soft mt-4 text-sm"
-          classList={alertTone(wishlist.statusHasError())}
-          role="status"
-        >
-          {wishlist.status()}
-        </div>
+      <Show when={props.session.notice()}>
+        {(notice) => <StatusAlert notice={notice()} class="mt-4" />}
       </Show>
       <p class="mt-5 -mr-2 -mb-1 -ml-2 flex items-center justify-center gap-1.5 border-t border-[#eeecd5] pt-4 text-center text-[9px] text-[#a0a29b]">
         Wishes are shared publicly. Your secret lets you manage them from any

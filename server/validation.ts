@@ -10,6 +10,16 @@ export const wishInputSchema = Schema.Struct({
   turnstileToken: Schema.String.check(Schema.isMaxLength(4096)),
 });
 
+/** The editable fields of an existing wish. */
+export const wishUpdateSchema = Schema.Struct({
+  name: trimmedString(120),
+  link: trimmedString(2000),
+});
+
+export const reactionInputSchema = Schema.Struct({
+  emoji: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(16)),
+});
+
 export const sessionInputSchema = Schema.Struct({
   name: trimmedString(60),
   secret: Schema.String.check(Schema.isMinLength(1), Schema.isMaxLength(64)),

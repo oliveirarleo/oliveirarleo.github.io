@@ -1,15 +1,20 @@
 import { randomUUID } from "node:crypto";
 import { APIError } from "better-auth";
+import { isReaction, type Reaction } from "../../shared/reactions.ts";
 import { type createAuth, normalizeUsername } from "../auth.ts";
 import { HttpError } from "../http.ts";
 import { createUserSecret, normalizeUserSecret } from "../user-secrets.ts";
 import { normalizeWebUrl } from "../validation.ts";
 import {
+  byReactionOrder,
   displayName,
   type PublicUser,
+  type PublicWish,
   WISH_LIMIT,
   WishLimitReached,
   type WishlistRepository,
+  type WishReactionSummary,
+  type WishRecord,
 } from "./repository.ts";
 
 type Auth = ReturnType<typeof createAuth>;
@@ -30,21 +35,53 @@ type Owner =
     };
 
 const wrongSecret = () =>
-  new HttpError({ status: 401, message: "That user secret is not valid." });
+  new HttpError({
+    status: 401,
+    code: "wrong_secret",
+    message: "That user secret is not valid.",
+  });
 
 const sessionRequired = () =>
-  new HttpError({ status: 401, message: "Use your secret to manage wishes." });
+  new HttpError({
+    status: 401,
+    code: "session_expired",
+    message: "Use your secret to manage wishes.",
+  });
 
 const nameTaken = () =>
   new HttpError({
     status: 409,
+    code: "name_taken",
     message: "This name already exists; enter its secret.",
   });
 
 const wishlistFull = () =>
   new HttpError({
     status: 409,
+    code: "wishlist_full",
     message: `The wishlist is full (${WISH_LIMIT} links).`,
+  });
+
+const wishNotFound = () =>
+  new HttpError({
+    status: 404,
+    code: "wish_not_found",
+    message: "Wish not found.",
+  });
+
+const invalidLink = () =>
+  new HttpError({
+    status: 400,
+    code: "invalid_link",
+    message:
+      "The gift link must be a valid HTTP or HTTPS URL without credentials.",
+  });
+
+const invalidReaction = () =>
+  new HttpError({
+    status: 400,
+    code: "invalid_reaction",
+    message: "Choose one of the available reactions.",
   });
 
 // Better Auth reports a wrong name or secret with these codes. Any other error is a real failure.
@@ -89,6 +126,39 @@ export function createWishlistService(
     });
     if (!session) throw sessionRequired();
     return publicUser(session.user as AuthUser);
+  }
+
+  /**
+   * Attaches reaction summaries to wishes with two queries, never one per
+   * wish. The map keeps the read path independent of the list size.
+   */
+  async function present(records: WishRecord[]): Promise<PublicWish[]> {
+    if (records.length === 0) return [];
+    const rows = await repository.listReactions(records.map(({ id }) => id));
+    const grouped = new Map<string, Map<Reaction, string[]>>();
+    for (const row of rows) {
+      let byEmoji = grouped.get(row.wishId);
+      if (!byEmoji) {
+        byEmoji = new Map();
+        grouped.set(row.wishId, byEmoji);
+      }
+      const userIds = byEmoji.get(row.emoji);
+      if (userIds) userIds.push(row.userId);
+      else byEmoji.set(row.emoji, [row.userId]);
+    }
+    return records.map((record) => {
+      const byEmoji = grouped.get(record.id);
+      const reactions: WishReactionSummary[] = byEmoji
+        ? [...byEmoji.entries()]
+            .map(([emoji, userIds]) => ({ emoji, userIds }))
+            .sort(byReactionOrder)
+        : [];
+      return { ...record, reactions };
+    });
+  }
+
+  async function presentOne(record: WishRecord) {
+    return (await present([record]))[0] as PublicWish;
   }
 
   /**
@@ -152,9 +222,17 @@ export function createWishlistService(
     await repository.deleteUser(userId).catch(() => undefined);
   }
 
+  /** Any assumed user may react; the wish only has to exist. */
+  async function reactionUser(sessionToken: string, wishId: string) {
+    const user = await sessionUser(sessionToken);
+    if (!(await repository.findWish(wishId))) throw wishNotFound();
+    return user;
+  }
+
   return {
-    list: (limit: number, offset: number) =>
-      repository.listWishes(limit, offset),
+    async list(limit: number, offset: number) {
+      return present(await repository.listWishes(limit, offset));
+    },
 
     async createWish(input: {
       author: string;
@@ -163,20 +241,14 @@ export function createWishlistService(
       sessionToken?: string | undefined;
     }) {
       const link = normalizeWebUrl(input.link);
-      if (!link) {
-        throw new HttpError({
-          status: 400,
-          message:
-            "The gift link must be a valid HTTP or HTTPS URL without credentials.",
-        });
-      }
+      if (!link) throw invalidLink();
 
       const owner = await resolveOwner(input);
       try {
         const wish = await addWish(owner.user, { name: input.name, link });
         return {
           user: owner.user,
-          wish,
+          wish: await presentOne(wish),
           ...(owner.isNewUser
             ? { secret: owner.secret, sessionToken: owner.sessionToken }
             : {}),
@@ -185,6 +257,41 @@ export function createWishlistService(
         if (owner.isNewUser) await rollbackNewUser(owner.user.id);
         throw error;
       }
+    },
+
+    /** Owner-only edit of the two content fields; the author stays derived. */
+    async updateWish(
+      wishId: string,
+      sessionToken: string,
+      input: { name: string; link: string },
+    ) {
+      const user = await sessionUser(sessionToken);
+      const link = normalizeWebUrl(input.link);
+      if (!link) throw invalidLink();
+      if (!(await repository.updateWish(wishId, user.id, { ...input, link })))
+        throw wishNotFound();
+      const updated = await repository.findWish(wishId);
+      if (!updated) throw wishNotFound();
+      return presentOne(updated);
+    },
+
+    /** Sets (or replaces) this user's single reaction on a wish. */
+    async setReaction(wishId: string, sessionToken: string, emoji: string) {
+      const user = await reactionUser(sessionToken, wishId);
+      if (!isReaction(emoji)) throw invalidReaction();
+      await repository.setReaction(wishId, user.id, emoji);
+      const updated = await repository.findWish(wishId);
+      if (!updated) throw wishNotFound();
+      return presentOne(updated);
+    },
+
+    /** Clears this user's reaction. Idempotent: no reaction is still success. */
+    async clearReaction(wishId: string, sessionToken: string) {
+      const user = await reactionUser(sessionToken, wishId);
+      await repository.clearReaction(wishId, user.id);
+      const updated = await repository.findWish(wishId);
+      if (!updated) throw wishNotFound();
+      return presentOne(updated);
     },
 
     /** Signs in with name + secret and returns a bearer session token. */
@@ -209,7 +316,7 @@ export function createWishlistService(
     async remove(id: string, sessionToken: string) {
       const user = await sessionUser(sessionToken);
       if (!(await repository.deleteWish(id, user.id))) {
-        throw new HttpError({ status: 404, message: "Wish not found." });
+        throw wishNotFound();
       }
       return { ok: true as const };
     },
@@ -245,3 +352,5 @@ export function createWishlistService(
     },
   };
 }
+
+export type WishlistService = ReturnType<typeof createWishlistService>;

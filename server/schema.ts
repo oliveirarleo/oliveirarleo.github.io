@@ -1,5 +1,11 @@
 import { sql } from "drizzle-orm";
-import { index, integer, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+} from "drizzle-orm/sqlite-core";
 
 const createdAt = () =>
   integer("created_at", { mode: "timestamp_ms" })
@@ -93,9 +99,33 @@ export const wishes = sqliteTable(
     name: text("name").notNull(),
     link: text("link").notNull(),
     createdAt: text("created_at").notNull(),
+    /** Null until the owner first edits the wish. */
+    updatedAt: text("updated_at"),
   },
   (table) => [
     index("wishes_created_at_idx").on(table.createdAt),
     index("wishes_user_id_idx").on(table.userId),
+  ],
+);
+
+/**
+ * One reaction per user per wish, enforced by the composite primary key.
+ * Changing a reaction is an upsert; clearing it is a delete.
+ */
+export const wishReactions = sqliteTable(
+  "wish_reactions",
+  {
+    wishId: text("wish_id")
+      .notNull()
+      .references(() => wishes.id, { onDelete: "cascade" }),
+    userId: text("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    emoji: text("emoji").notNull(),
+    createdAt: text("created_at").notNull(),
+  },
+  (table) => [
+    primaryKey({ columns: [table.wishId, table.userId] }),
+    index("wish_reactions_user_id_idx").on(table.userId),
   ],
 );

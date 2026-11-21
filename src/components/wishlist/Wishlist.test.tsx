@@ -73,10 +73,10 @@ describe("Wishlist layout", () => {
   it("shows the add-wish panel in place on desktop", () => {
     const { container } = render(() => <Wishlist apiUrl="https://api.test" />);
 
-    const panel = container.querySelector<HTMLDialogElement>(
-      'dialog[aria-labelledby="form-title"]',
-    );
-    expect(panel?.hasAttribute("open")).toBe(true);
+    // Desktop is a sticky sidebar, not a modal: no dialog is mounted.
+    expect(
+      container.querySelector('dialog[aria-labelledby="form-title"]'),
+    ).toBeNull();
     expect(screen.getByLabelText("What are you wishing for?")).not.toBeNull();
   });
 
@@ -89,8 +89,13 @@ describe("Wishlist layout", () => {
     );
     expect(panel?.open).toBe(false);
 
-    fireEvent.click(screen.getByRole("button", { name: "Add a wish" }));
+    const fab = screen.getByRole("button", { name: "Add a wish" });
+    expect(fab.getAttribute("aria-haspopup")).toBe("dialog");
+    expect(fab.getAttribute("aria-controls")).toBe("add-wish-dialog");
+
+    fireEvent.click(fab);
 
     expect(panel?.open).toBe(true);
+    expect(screen.queryByRole("button", { name: "Add a wish" })).toBeNull();
   });
 });
