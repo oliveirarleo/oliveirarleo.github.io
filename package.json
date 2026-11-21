@@ -7,16 +7,16 @@
     "node": ">=26"
   },
   "scripts": {
-    "test": "pnpm biome check . --fix",
+    "test": "vitest run",
     "dev": "astro dev",
     "dev:api": "NODE_ENV=development node --env-file-if-exists=.env --env-file-if-exists=.dev.env --watch server/index.ts",
     "start": "astro dev",
     "start:api": "NODE_ENV=production node --env-file-if-exists=.env server/index.ts",
-    "test:api": "node --test server/*.test.ts",
     "build": "astro check && astro build",
     "preview": "astro preview",
     "astro": "astro",
-    "prepare": "husky"
+    "prepare": "husky",
+    "test:watch": "vitest"
   },
   "devDependencies": {
     "@astrojs/check": "^0.9.12",
@@ -28,14 +28,22 @@
     "@biomejs/biome": "^2.6.8",
     "@playform/compress": "^0.2.5",
     "@shikijs/transformers": "^4.6.0",
+    "@solidjs/testing-library": "^0.8.10",
+    "@tailwindcss/vite": "^4.3.5",
+    "@testing-library/dom": "^10.4.2",
     "@types/node": "^26.6.6",
     "@vite-pwa/astro": "^2.0.4",
     "astro": "^7.4.13",
+    "daisyui": "^5.8.1",
     "drizzle-kit": "1.0.0-rc.6",
     "husky": "^9.1.7",
+    "jsdom": "^31.0.1",
     "rehype-external-links": "^3.0.0",
     "sharp": "^0.35.5",
+    "tailwindcss": "^4.3.5",
     "typescript": "^6.0.3",
+    "vite-plugin-solid": "^2.11.17",
+    "vitest": "^5.1.1",
     "zod": "^4.6.7"
   },
   "dependencies": {

@@ -121,18 +121,21 @@ export default function TurnstileField(props: {
 
   return (
     <>
-      <div ref={container} class="turnstile-container" />
+      <div
+        ref={container}
+        class="mt-[16px] mb-[14px] max-w-full overflow-hidden empty:hidden"
+      />
       <Show when={message()}>
-        <p class="turnstile-error" role="status">
-          {message()}{" "}
+        <div class="alert alert-error alert-soft text-xs" role="status">
+          <span>{message()}</span>
           <button
             type="button"
-            class="text-button"
+            class="btn btn-ghost btn-xs"
             onClick={() => void setup()}
           >
             Retry verification
           </button>
-        </p>
+        </div>
       </Show>
     </>
   );

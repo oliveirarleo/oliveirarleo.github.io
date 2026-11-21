@@ -3,301 +3,304 @@
   https://github.com/HermanMartinus/bearblog/blob/297026a877bc2ab2b3bdfbd6b9f7961c350917dd/templates/styles/blog/default.css
   License MIT: https://github.com/HermanMartinus/bearblog/blob/master/LICENSE.md
  */
+/* Layered so page-specific styles and Tailwind utilities can override these base rules. */
+@layer base {
+  :root {
+    --accent: 1, 82, 147;
+    --background: 255, 255, 255;
+    --foreground: 15, 18, 25;
+    --highlight: 255, 255, 255, 17;
+    --highlight-border: 84, 84, 84;
+    --success: 16, 185, 129, 29%;
+    --warning: 234, 179, 8, 29%;
+    --error: 244, 63, 94, 29%;
+    --gray: 96, 115, 159;
+    --gray-light: 229, 233, 240;
+    --gray-dark: 34, 41, 57;
+    --gray-gradient: rgba(var(--gray-light), 50%), rgb(var(--background));
+    --box-shadow:
+      0 2px 6px rgba(var(--gray), 25%), 0 8px 24px rgba(var(--gray), 33%),
+      0 16px 32px rgba(var(--gray), 33%);
+  }
 
-:root {
-  --accent: 1, 82, 147;
-  --background: 255, 255, 255;
-  --foreground: 15, 18, 25;
-  --highlight: 255, 255, 255, 17;
-  --highlight-border: 84, 84, 84;
-  --success: 16, 185, 129, 29%;
-  --warning: 234, 179, 8, 29%;
-  --error: 244, 63, 94, 29%;
-  --gray: 96, 115, 159;
-  --gray-light: 229, 233, 240;
-  --gray-dark: 34, 41, 57;
-  --gray-gradient: rgba(var(--gray-light), 50%), rgb(var(--background));
-  --box-shadow:
-    0 2px 6px rgba(var(--gray), 25%), 0 8px 24px rgba(var(--gray), 33%),
-    0 16px 32px rgba(var(--gray), 33%);
-}
+  html.dark {
+    --accent: 132, 186, 230;
+    --background: 15, 18, 25;
+    --foreground: 255, 255, 255;
+    --highlight: 255, 255, 255, 17;
+    --highlight-border: 84, 84, 84;
+    --success: 16, 185, 129, 29%;
+    --warning: 234, 179, 8, 29%;
+    --error: 244, 63, 94, 29%;
+    --gray: 181, 193, 203;
+    --gray-light: 40, 40, 40;
+    --gray-dark: 241, 243, 247;
+    --gray-gradient:
+      rgba(var(--gray-light), 50%) 0%, rgb(var(--background)) 100%;
+    --box-shadow:
+      0 2px 6px rgba(var(--gray), 25%), 0 8px 24px rgba(var(--gray), 33%),
+      0 16px 32px rgba(var(--gray), 33%);
+  }
 
-html.dark {
-  --accent: 132, 186, 230;
-  --background: 15, 18, 25;
-  --foreground: 255, 255, 255;
-  --highlight: 255, 255, 255, 17;
-  --highlight-border: 84, 84, 84;
-  --success: 16, 185, 129, 29%;
-  --warning: 234, 179, 8, 29%;
-  --error: 244, 63, 94, 29%;
-  --gray: 181, 193, 203;
-  --gray-light: 40, 40, 40;
-  --gray-dark: 241, 243, 247;
-  --gray-gradient: rgba(var(--gray-light), 50%) 0%, rgb(var(--background)) 100%;
-  --box-shadow:
-    0 2px 6px rgba(var(--gray), 25%), 0 8px 24px rgba(var(--gray), 33%),
-    0 16px 32px rgba(var(--gray), 33%);
-}
+  /* The bare minimum English subset, plus copyright & arrows (← ↑ → ↓) & quotes (“ ” ‘ ’) & bullet (•) */
+  @font-face {
+    font-family: "RecVar";
+    font-style: oblique 0deg 15deg;
+    font-weight: 300 1000;
+    font-display: swap;
+    src: url("/fonts/recursive.woff2") format("woff2");
+    unicode-range:
+      U+0020-007F, U+00A9, U+2190-2193, U+2018, U+2019, U+201C, U+201D, U+2022;
+  }
 
-/* The bare minimum English subset, plus copyright & arrows (← ↑ → ↓) & quotes (“ ” ‘ ’) & bullet (•) */
-@font-face {
-  font-family: "RecVar";
-  font-style: oblique 0deg 15deg;
-  font-weight: 300 1000;
-  font-display: swap;
-  src: url("/fonts/recursive.woff2") format("woff2");
-  unicode-range:
-    U+0020-007F, U+00A9, U+2190-2193, U+2018, U+2019, U+201C, U+201D, U+2022;
-}
+  /* unicode latin-1 letters, basic european diacritics */
+  @font-face {
+    font-family: "RecVar";
+    font-style: oblique 0deg 15deg;
+    font-weight: 300 1000;
+    font-display: swap;
+    src: url("/fonts/recursive-latin-1.woff2") format("woff2");
+    unicode-range: U+00C0-00FF;
+  }
 
-/* unicode latin-1 letters, basic european diacritics */
-@font-face {
-  font-family: "RecVar";
-  font-style: oblique 0deg 15deg;
-  font-weight: 300 1000;
-  font-display: swap;
-  src: url("/fonts/recursive-latin-1.woff2") format("woff2");
-  unicode-range: U+00C0-00FF;
-}
-
-body {
-  font-family: "RecVar", sans-serif;
-  font-optical-sizing: auto;
-  margin: 0;
-  padding: 0;
-  text-align: left;
-  background:
-    linear-gradient(
-      to bottom,
-      rgb(var(--gray-light)) 0%,
-      rgb(var(--background)) 100%
-    ),
-    rgb(var(--background));
-  background-size: 100% 600px;
-  background-repeat: no-repeat;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
-  color: rgb(var(--gray-dark));
-  font-size: 20px;
-  line-height: 1.7;
-}
-
-main {
-  width: 720px;
-  max-width: calc(100% - 2em);
-  margin: auto;
-  padding: 3em 1em;
-}
-
-h1,
-h2,
-h3,
-h4,
-h5,
-h6 {
-  margin: 0 0 0.5rem 0;
-  color: rgb(var(--foreground));
-  line-height: 1.2;
-}
-
-h1 {
-  font-size: 3.052em;
-}
-
-h2 {
-  font-size: 2.441em;
-}
-
-h3 {
-  font-size: 1.953em;
-}
-
-h4 {
-  font-size: 1.563em;
-}
-
-h5 {
-  font-size: 1.25em;
-}
-
-strong,
-b {
-  font-weight: 700;
-}
-
-a {
-  color: rgba(var(--accent));
-}
-
-a:hover {
-  color: rgba(var(--accent));
-}
-
-p {
-  margin-bottom: 1em;
-}
-
-.prose p {
-  margin-bottom: 2em;
-}
-
-textarea {
-  width: 100%;
-  font-size: 16px;
-}
-
-input {
-  font-size: 16px;
-}
-
-table {
-  width: 100%;
-}
-
-img {
-  max-width: 100%;
-  height: auto;
-  border-radius: 8px;
-}
-
-code {
-  position: relative;
-  padding: 2px 5px;
-  background-color: rgb(var(--gray-light));
-  border-radius: 2px;
-}
-
-pre {
-  padding: 1.5em;
-  border-radius: 8px;
-  font-family: "RecVar", sans-serif, monospace;
-  font-variation-settings:
-    "slnt" 0,
-    "CASL" 0,
-    "CRSV" 0.5,
-    "MONO" 1;
-}
-
-pre > code {
-  all: unset;
-}
-
-blockquote {
-  border-left: 4px solid rgba(var(--accent));
-  padding: 0 0 0 20px;
-  margin: 0px;
-  font-size: 1.333em;
-}
-
-hr {
-  border: none;
-  border-top: 1px solid rgb(var(--gray-light));
-}
-
-@media (max-width: 720px) {
   body {
-    font-size: 18px;
+    font-family: "RecVar", sans-serif;
+    font-optical-sizing: auto;
+    margin: 0;
+    padding: 0;
+    text-align: left;
+    background:
+      linear-gradient(
+        to bottom,
+        rgb(var(--gray-light)) 0%,
+        rgb(var(--background)) 100%
+      ),
+      rgb(var(--background));
+    background-size: 100% 600px;
+    background-repeat: no-repeat;
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    color: rgb(var(--gray-dark));
+    font-size: 20px;
+    line-height: 1.7;
   }
 
   main {
-    padding: 1em;
+    width: 720px;
+    max-width: calc(100% - 2em);
+    margin: auto;
+    padding: 3em 1em;
   }
-}
 
-.sr-only {
-  border: 0;
-  padding: 0;
-  margin: 0;
-  /* biome-ignore lint/complexity/noImportantStyles: keep screen-reader-only content hidden */
-  position: absolute !important;
-  height: 1px;
-  width: 1px;
-  overflow: hidden;
-  /* IE6, IE7 - a 0 height clip, off to the bottom right of the visible 1px box */
-  clip: rect(1px 1px 1px 1px);
-  /* maybe deprecated but we need to support legacy browsers */
-  /* biome-ignore lint/suspicious/noDuplicateProperties: legacy browser fallback */
-  clip: rect(1px, 1px, 1px, 1px);
-  /* modern browsers, clip-path works inwards from each corner */
-  clip-path: inset(50%);
-  /* added line to stop words getting smushed together (as they go onto separate lines and some screen readers do not understand line feeds as a space */
-  white-space: nowrap;
-}
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    margin: 0 0 0.5rem 0;
+    color: rgb(var(--foreground));
+    line-height: 1.2;
+  }
 
-.line {
-  display: inline-block;
-  padding-bottom: 0;
-}
+  h1 {
+    font-size: 3.052em;
+  }
 
-.highlighted {
-  transition: background-color 0.5s;
-  margin: 0 -1.4em;
-  padding: 0 1.4em;
-  width: 100%;
-  display: inline-block;
-  background-color: rgba(var(--highlight));
-}
+  h2 {
+    font-size: 2.441em;
+  }
 
-.diff {
-  margin: 0 -1.4em;
-  padding: 0 1.4em;
-  width: 100%;
-}
+  h3 {
+    font-size: 1.953em;
+  }
 
-.diff.add {
-  background-color: rgba(var(--success));
-}
+  h4 {
+    font-size: 1.563em;
+  }
 
-.diff.remove {
-  background-color: rgba(var(--error));
-}
+  h5 {
+    font-size: 1.25em;
+  }
 
-.highlighted-word {
-  all: unset;
-  display: inline-block;
-  margin-inline: 0.025rem;
-  padding-inline: 0.2rem;
-  border: solid;
-  border-color: rgba(var(--highlight-border));
-  border-radius: 0.2rem;
-  background: rgba(var(--highlight));
-  background-clip: padding-box;
-}
+  strong,
+  b {
+    font-weight: 700;
+  }
 
-.error {
-  background: rgba(var(--error));
-}
+  a {
+    color: rgba(var(--accent));
+  }
 
-.warning {
-  background: rgba(var(--warning));
-}
+  a:hover {
+    color: rgba(var(--accent));
+  }
 
-.has-focused:hover .line:not(.has-focus) {
-  filter: blur(0);
-  opacity: 1;
-}
+  p {
+    margin-bottom: 1em;
+  }
 
-.has-focused .line:not(.focused) {
-  opacity: 0.7;
-  transition:
-    filter 0.35s,
-    opacity 0.35s;
-}
+  .prose p {
+    margin-bottom: 2em;
+  }
 
-.has-focused .line:not(.focused) {
-  filter: blur(0.095rem);
-  opacity: 0.4;
-  transition:
-    filter 0.35s,
-    opacity 0.35s;
-}
+  textarea {
+    width: 100%;
+    font-size: 16px;
+  }
 
-pre .line:last-child {
-  content: "";
-  display: none;
-}
+  input {
+    font-size: 16px;
+  }
 
-pre:has(code) {
-  position: relative;
+  table {
+    width: 100%;
+  }
+
+  img {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+  }
+
+  code {
+    position: relative;
+    padding: 2px 5px;
+    background-color: rgb(var(--gray-light));
+    border-radius: 2px;
+  }
+
+  pre {
+    padding: 1.5em;
+    border-radius: 8px;
+    font-family: "RecVar", sans-serif, monospace;
+    font-variation-settings:
+      "slnt" 0,
+      "CASL" 0,
+      "CRSV" 0.5,
+      "MONO" 1;
+  }
+
+  pre > code {
+    all: unset;
+  }
+
+  blockquote {
+    border-left: 4px solid rgba(var(--accent));
+    padding: 0 0 0 20px;
+    margin: 0px;
+    font-size: 1.333em;
+  }
+
+  hr {
+    border: none;
+    border-top: 1px solid rgb(var(--gray-light));
+  }
+
+  @media (max-width: 720px) {
+    body {
+      font-size: 18px;
+    }
+
+    main {
+      padding: 1em;
+    }
+  }
+
+  .sr-only {
+    border: 0;
+    padding: 0;
+    margin: 0;
+    /* biome-ignore lint/complexity/noImportantStyles: keep screen-reader-only content hidden */
+    position: absolute !important;
+    height: 1px;
+    width: 1px;
+    overflow: hidden;
+    /* IE6, IE7 - a 0 height clip, off to the bottom right of the visible 1px box */
+    clip: rect(1px 1px 1px 1px);
+    /* maybe deprecated but we need to support legacy browsers */
+    /* biome-ignore lint/suspicious/noDuplicateProperties: legacy browser fallback */
+    clip: rect(1px, 1px, 1px, 1px);
+    /* modern browsers, clip-path works inwards from each corner */
+    clip-path: inset(50%);
+    /* added line to stop words getting smushed together (as they go onto separate lines and some screen readers do not understand line feeds as a space */
+    white-space: nowrap;
+  }
+
+  .line {
+    display: inline-block;
+    padding-bottom: 0;
+  }
+
+  .highlighted {
+    transition: background-color 0.5s;
+    margin: 0 -1.4em;
+    padding: 0 1.4em;
+    width: 100%;
+    display: inline-block;
+    background-color: rgba(var(--highlight));
+  }
+
+  .diff {
+    margin: 0 -1.4em;
+    padding: 0 1.4em;
+    width: 100%;
+  }
+
+  .diff.add {
+    background-color: rgba(var(--success));
+  }
+
+  .diff.remove {
+    background-color: rgba(var(--error));
+  }
+
+  .highlighted-word {
+    all: unset;
+    display: inline-block;
+    margin-inline: 0.025rem;
+    padding-inline: 0.2rem;
+    border: solid;
+    border-color: rgba(var(--highlight-border));
+    border-radius: 0.2rem;
+    background: rgba(var(--highlight));
+    background-clip: padding-box;
+  }
+
+  .error {
+    background: rgba(var(--error));
+  }
+
+  .warning {
+    background: rgba(var(--warning));
+  }
+
+  .has-focused:hover .line:not(.has-focus) {
+    filter: blur(0);
+    opacity: 1;
+  }
+
+  .has-focused .line:not(.focused) {
+    opacity: 0.7;
+    transition:
+      filter 0.35s,
+      opacity 0.35s;
+  }
+
+  .has-focused .line:not(.focused) {
+    filter: blur(0.095rem);
+    opacity: 0.4;
+    transition:
+      filter 0.35s,
+      opacity 0.35s;
+  }
+
+  pre .line:last-child {
+    content: "";
+    display: none;
+  }
+
+  pre:has(code) {
+    position: relative;
+  }
 }

@@ -61,7 +61,7 @@ in
       default = null;
       example = "/run/secrets/wishlist.env";
       description = ''
-        EnvironmentFile containing TURNSTILE_SECRET, BETTER_AUTH_SECRET and WISHLIST_SECRET_PEPPER.
+        EnvironmentFile containing TURNSTILE_SECRET and BETTER_AUTH_SECRET.
         A sops-nix template is recommended so secrets are not stored in the Nix store.
       '';
     };
@@ -101,6 +101,34 @@ in
       };
     };
 
+    # Daily consistent SQLite snapshot. Losing the database loses every wish and
+    # every user secret, so keep the newest 14 copies.
+    systemd.services.wishlist-backup = {
+      description = "Back up the Christmas wishlist database";
+      serviceConfig = {
+        Type = "oneshot";
+        User = cfg.user;
+        Group = cfg.group;
+        StateDirectory = "wishlist";
+        UMask = "0077";
+        ExecStart = pkgs.writeShellScript "wishlist-backup" ''
+          set -euo pipefail
+          dir=/var/lib/wishlist/backups
+          mkdir -p "$dir"
+          stamp=$(date -u +%Y%m%dT%H%M%SZ)
+          ${pkgs.sqlite}/bin/sqlite3 /var/lib/wishlist/wishes.db ".backup '$dir/wishes-$stamp.db'"
+          ls -1t "$dir"/wishes-*.db | tail -n +15 | xargs -r rm --
+        '';
+      };
+    };
+    systemd.timers.wishlist-backup = {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = "daily";
+        Persistent = true;
+      };
+    };
+
     # Do not open the API port in the NixOS firewall.
     systemd.services.wishlist = {
       description = "Christmas Wishlist API";
@@ -114,6 +142,8 @@ in
         PORT = toString cfg.port;
         DATABASE_PATH = "/var/lib/wishlist/wishes.db";
         ALLOWED_ORIGIN = cfg.allowedOrigin;
+        # The API only listens behind the Cloudflare Tunnel, so client IPs come from its headers.
+        TRUST_PROXY = "true";
       };
 
       serviceConfig = {

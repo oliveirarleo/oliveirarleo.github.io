@@ -1,78 +1,155 @@
-import { randomBytes, randomUUID } from "node:crypto";
-import type { createAuth } from "../auth.ts";
+import { randomUUID } from "node:crypto";
+import { APIError } from "better-auth";
+import { type createAuth, normalizeUsername } from "../auth.ts";
 import { HttpError } from "../http.ts";
-import {
-  createUserSecret,
-  hashUserSecret,
-  secretLookup,
-  verifyUserSecret,
-} from "../user-secrets.ts";
+import { createUserSecret, normalizeUserSecret } from "../user-secrets.ts";
 import { normalizeWebUrl } from "../validation.ts";
-import type { PublicUser, WishlistRepository } from "./repository.ts";
+import {
+  displayName,
+  type PublicUser,
+  WISH_LIMIT,
+  WishLimitReached,
+  type WishlistRepository,
+} from "./repository.ts";
 
 type Auth = ReturnType<typeof createAuth>;
 
-export function nameKey(name: string) {
-  return name.trim().toLocaleLowerCase();
+interface AuthUser {
+  id: string;
+  name: string;
+  displayUsername?: string | null;
 }
 
+type Owner =
+  | { user: PublicUser; isNewUser: false }
+  | {
+      user: PublicUser;
+      isNewUser: true;
+      secret: string;
+      sessionToken: string | undefined;
+    };
+
+const wrongSecret = () =>
+  new HttpError({ status: 401, message: "That user secret is not valid." });
+
+const sessionRequired = () =>
+  new HttpError({ status: 401, message: "Use your secret to manage wishes." });
+
+const nameTaken = () =>
+  new HttpError({
+    status: 409,
+    message: "This name already exists; enter its secret.",
+  });
+
+const wishlistFull = () =>
+  new HttpError({
+    status: 409,
+    message: `The wishlist is full (${WISH_LIMIT} links).`,
+  });
+
+// Better Auth reports a wrong name or secret with these codes. Any other error is a real failure.
+function isWrongSecretError(error: unknown) {
+  if (!(error instanceof APIError)) return false;
+  const code = error.body?.code;
+  return code === "INVALID_USERNAME_OR_PASSWORD" || code === "INVALID_PASSWORD";
+}
+
+// Only a wrong name or secret becomes 401; database and other failures stay 500.
+async function mapWrongSecretTo401<A>(call: () => Promise<A>): Promise<A> {
+  try {
+    return await call();
+  } catch (error) {
+    if (isWrongSecretError(error)) throw wrongSecret();
+    throw error;
+  }
+}
+
+// Better Auth needs an email column value; it is never shown or used to sign in.
+const placeholderEmail = () => `${randomUUID()}@wishlist.invalid`;
+
+function publicUser(user: AuthUser): PublicUser {
+  return { id: user.id, name: displayName(user) };
+}
+
+/**
+ * Better Auth owns passwords (the user secret), sessions and bearer tokens.
+ * See docs/adr/0001-user-secret-as-password.md.
+ */
 export function createWishlistService(
   repository: WishlistRepository,
   auth: Auth,
-  pepper: string,
 ) {
-  async function publicUser(id: string): Promise<PublicUser> {
-    const user = await repository.findUserById(id);
-    if (!user)
-      throw new HttpError({
-        status: 401,
-        message: "That user secret is not valid.",
-      });
-    return { id: user.id, name: user.name };
+  function bearer(sessionToken: string) {
+    return new Headers({ authorization: `Bearer ${sessionToken}` });
   }
 
-  async function authenticate(secret: string) {
-    const credentials = await repository.findSecretByLookup(
-      secretLookup(secret, pepper),
-    );
-    if (
-      !credentials ||
-      !(await verifyUserSecret(
-        secret,
-        credentials.secretSalt,
-        credentials.secretHash,
-      ))
-    ) {
-      throw new HttpError({
-        status: 401,
-        message: "That user secret is not valid.",
-      });
-    }
-    return {
-      user: await publicUser(credentials.userId),
-      credentialId: credentials.id,
-    };
-  }
-
-  async function issueSecret(userId: string) {
-    for (let attempt = 0; attempt < 5; attempt += 1) {
-      const secret = createUserSecret();
-      const credentials = await hashUserSecret(secret);
-      try {
-        await repository.createSecret({
-          userId,
-          ...credentials,
-          lookup: secretLookup(secret, pepper),
-        });
-        return secret;
-      } catch {
-        // A unique lookup collision is retried with a fresh secret.
-      }
-    }
-    throw new HttpError({
-      status: 500,
-      message: "Could not create a unique user secret.",
+  async function sessionUser(sessionToken: string): Promise<PublicUser> {
+    const session = await auth.api.getSession({
+      headers: bearer(sessionToken),
     });
+    if (!session) throw sessionRequired();
+    return publicUser(session.user as AuthUser);
+  }
+
+  /**
+   * With a session token the wish belongs to that session's user. Without one,
+   * a new name is registered and its secret returned once. An existing name
+   * must be assumed first, so it is never silently claimed.
+   */
+  async function resolveOwner(input: {
+    author: string;
+    sessionToken?: string | undefined;
+  }): Promise<Owner> {
+    if (input.sessionToken) {
+      return { user: await sessionUser(input.sessionToken), isNewUser: false };
+    }
+    if (await repository.findUserByUsername(normalizeUsername(input.author))) {
+      throw nameTaken();
+    }
+    const secret = createUserSecret();
+    try {
+      const signedUp = await auth.api.signUpEmail({
+        body: {
+          name: input.author.trim(),
+          email: placeholderEmail(),
+          password: secret,
+          username: normalizeUsername(input.author),
+          displayUsername: input.author.trim(),
+        },
+        returnHeaders: true,
+      });
+      return {
+        user: publicUser(signedUp.response.user as AuthUser),
+        isNewUser: true,
+        secret,
+        sessionToken: signedUp.headers.get("set-auth-token") ?? undefined,
+      };
+    } catch (error) {
+      if (
+        error instanceof APIError &&
+        error.body?.code === "USERNAME_IS_ALREADY_TAKEN"
+      ) {
+        throw nameTaken();
+      }
+      throw error;
+    }
+  }
+
+  async function addWish(
+    user: PublicUser,
+    input: { name: string; link: string },
+  ) {
+    try {
+      return await repository.addWishWithinLimit(user, input);
+    } catch (error) {
+      if (error instanceof WishLimitReached) throw wishlistFull();
+      throw error;
+    }
+  }
+
+  // A brand-new name must not be left behind when its first wish fails.
+  async function rollbackNewUser(userId: string) {
+    await repository.deleteUser(userId).catch(() => undefined);
   }
 
   return {
@@ -83,7 +160,7 @@ export function createWishlistService(
       author: string;
       name: string;
       link: string;
-      secret?: string | undefined;
+      sessionToken?: string | undefined;
     }) {
       const link = normalizeWebUrl(input.link);
       if (!link) {
@@ -93,69 +170,78 @@ export function createWishlistService(
             "The gift link must be a valid HTTP or HTTPS URL without credentials.",
         });
       }
-      const key = nameKey(input.author);
-      const existing = await repository.findUserByName(key);
 
-      if (existing) {
-        if (!input.secret) {
-          throw new HttpError({
-            status: 409,
-            message: "This name already exists; enter its secret.",
-          });
-        }
-        const assumed = await authenticate(input.secret);
-        if (assumed.user.id !== existing.id) {
-          throw new HttpError({
-            status: 401,
-            message: "That user secret is not valid.",
-          });
-        }
-        return {
-          user: assumed.user,
-          wish: await repository.addWish(assumed.user, {
-            name: input.name,
-            link,
-          }),
-        };
-      }
-
-      const registered = await auth.api.signUpEmail({
-        body: {
-          name: input.author.trim(),
-          email: `${randomUUID()}@wishlist.invalid`,
-          password: randomBytes(32).toString("base64url"),
-        },
-      });
+      const owner = await resolveOwner(input);
       try {
-        await repository.setNameKey(registered.user.id, key);
-        const secret = await issueSecret(registered.user.id);
-        const user = { id: registered.user.id, name: registered.user.name };
-        const wish = await repository.addWish(user, { name: input.name, link });
-        return { user, secret, wish };
+        const wish = await addWish(owner.user, { name: input.name, link });
+        return {
+          user: owner.user,
+          wish,
+          ...(owner.isNewUser
+            ? { secret: owner.secret, sessionToken: owner.sessionToken }
+            : {}),
+        };
       } catch (error) {
-        // Do not strand a name when any step after Better Auth signup fails.
-        await repository.deleteUser(registered.user.id).catch(() => undefined);
+        if (owner.isNewUser) await rollbackNewUser(owner.user.id);
         throw error;
       }
     },
 
-    async assume(secret: string) {
-      return { user: (await authenticate(secret)).user };
+    /** Signs in with name + secret and returns a bearer session token. */
+    async assume(name: string, secret: string) {
+      const signedIn = await mapWrongSecretTo401(() =>
+        auth.api.signInUsername({
+          body: {
+            username: normalizeUsername(name),
+            password: normalizeUserSecret(secret),
+          },
+          returnHeaders: true,
+        }),
+      );
+      const token = signedIn.headers.get("set-auth-token");
+      if (!token) throw wrongSecret();
+      return {
+        user: publicUser(signedIn.response.user as AuthUser),
+        sessionToken: token,
+      };
     },
 
-    async remove(id: string, secret: string) {
-      const { user } = await authenticate(secret);
+    async remove(id: string, sessionToken: string) {
+      const user = await sessionUser(sessionToken);
       if (!(await repository.deleteWish(id, user.id))) {
         throw new HttpError({ status: 404, message: "Wish not found." });
       }
       return { ok: true as const };
     },
 
-    async rotate(secret: string) {
-      const { user, credentialId } = await authenticate(secret);
-      const nextSecret = await issueSecret(user.id);
-      await repository.deleteSecret(credentialId);
-      return { user, secret: nextSecret };
+    /**
+     * Rotates the secret. Changing a password requires the current one, and
+     * revokes every other session so an old device cannot keep posting.
+     */
+    async rotate({
+      sessionToken,
+      currentSecret,
+    }: {
+      sessionToken: string;
+      currentSecret: string;
+    }) {
+      const user = await sessionUser(sessionToken);
+      const nextSecret = createUserSecret();
+      const changed = await mapWrongSecretTo401(() =>
+        auth.api.changePassword({
+          body: {
+            currentPassword: normalizeUserSecret(currentSecret),
+            newPassword: nextSecret,
+            revokeOtherSessions: true,
+          },
+          headers: bearer(sessionToken),
+          returnHeaders: true,
+        }),
+      );
+      // Revoking all sessions also ends this one; issue a fresh token.
+      const newToken = changed.headers.get("set-auth-token");
+      if (!newToken) throw wrongSecret();
+      return { user, secret: nextSecret, sessionToken: newToken };
     },
   };
 }

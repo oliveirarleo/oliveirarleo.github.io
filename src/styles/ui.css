@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+@source "../components/Wishlist.tsx";
+@source "../components/wishlist/*.tsx";
+
+/* Only the custom Christmas theme is shipped; no built-in DaisyUI themes. */
+@plugin "daisyui" {
+  themes: false;
+  logs: false;
+}
+
+@plugin "daisyui/theme" {
+  name: "christmas";
+  default: true;
+  prefersdark: false;
+  color-scheme: light;
+
+  --color-base-100: #fffefb;
+  --color-base-200: #f3efe4;
+  --color-base-300: #e3e1d8;
+  --color-base-content: #36403a;
+
+  --color-primary: #173f35;
+  --color-primary-content: #fdfbf5;
+  --color-secondary: #b03730;
+  --color-secondary-content: #fffaf1;
+  --color-accent: #b88a3e;
+  --color-accent-content: #2b2410;
+  --color-neutral: #2b3b34;
+  --color-neutral-content: #f3f0e7;
+
+  --color-info: #4b7f9e;
+  --color-info-content: #f2f8fb;
+  --color-success: #2f7a5a;
+  --color-success-content: #f1fbf5;
+  --color-warning: #b7791f;
+  --color-warning-content: #fff8ec;
+  --color-error: #a52f28;
+  --color-error-content: #fff5f3;
+
+  --radius-selector: 0.75rem;
+  --radius-field: 6px;
+  --radius-box: 12px;
+  --size-selector: 0.25rem;
+  --size-field: 0.25rem;
+  --border: 1px;
+  --depth: 0;
+  --noise: 0;
+}
+
+/* Headings on the wishlist page use the serif stack from the original design. */
+@theme {
+  --font-display: Georgia, "Times New Roman", serif;
+}
+
+/* Paper-grain overlay for the page background. Too long to inline as a utility. */
+@layer components {
+  .paper-grain {
+    background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 180 180' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.12'/%3E%3C/svg%3E");
+  }
+}
+
+/*
+  Unlayered on purpose: unlayered rules beat Tailwind's and DaisyUI's layered
+  transitions, so reduced motion needs no !important.
+*/
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition: none;
+  }
+}

@@ -19,12 +19,16 @@ export default function WishIcon(props: { link: string }) {
     }
   });
   return (
-    <span class="wish-icon" aria-hidden="true">
+    <span
+      class="grid size-[27px] shrink-0 place-items-center overflow-hidden rounded-md border border-[#e3e1d8] bg-white text-[#68736b]"
+      aria-hidden="true"
+    >
       <Show
         when={hostname() && !failed()}
         fallback={<Globe size={18} aria-hidden="true" />}
       >
         <img
+          class="size-[18px]"
           src={`https://icons.duckduckgo.com/ip3/${encodeURIComponent(hostname())}.ico`}
           alt=""
           loading="lazy"

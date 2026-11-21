@@ -6,12 +6,11 @@ export const logger = pino({
   redact: {
     paths: [
       "secret",
-      "secretPepper",
+      "password",
       "authSecret",
-      "req.headers.x-wishlist-secret",
-      "headers.x-wishlist-secret",
+      "req.headers.authorization",
+      "headers.authorization",
       "err.config.BETTER_AUTH_SECRET",
-      "err.config.WISHLIST_SECRET_PEPPER",
       "err.config.TURNSTILE_SECRET",
     ],
     censor: "[Redacted]",

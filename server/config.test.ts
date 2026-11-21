@@ -1,25 +1,23 @@
-import assert from "node:assert/strict";
-import { test } from "node:test";
 import { Schema } from "effect";
+import { expect, it } from "vitest";
 import { envSchema, loadConfig } from "./config.ts";
 
 const required = {
   ALLOWED_ORIGIN: "https://example.com",
   BETTER_AUTH_SECRET: "local-test-auth-secret-at-least-32-characters",
-  WISHLIST_SECRET_PEPPER: "local-test-secret-pepper",
 };
 
-test("environment defaults are decoded", () => {
+it("environment defaults are decoded", () => {
   const config = loadConfig(required);
-  assert.equal(config.NODE_ENV, "development");
-  assert.equal(config.HOST, "127.0.0.1");
-  assert.equal(config.PORT, 8787);
-  assert.equal(config.DATABASE_PATH, "./data/wishes.db");
-  assert.equal(config.ALLOWED_ORIGIN, "https://example.com");
-  assert.equal(config.TURNSTILE_SECRET, undefined);
+  expect(config.NODE_ENV).toBe("development");
+  expect(config.HOST).toBe("127.0.0.1");
+  expect(config.PORT).toBe(8787);
+  expect(config.DATABASE_PATH).toBe("./data/wishes.db");
+  expect(config.ALLOWED_ORIGIN).toBe("https://example.com");
+  expect(config.TURNSTILE_SECRET).toBe(undefined);
 });
 
-test("environment values are decoded from strings", () => {
+it("environment values are decoded from strings", () => {
   const config = loadConfig({
     ...required,
     NODE_ENV: "production",
@@ -28,41 +26,42 @@ test("environment values are decoded from strings", () => {
     DATABASE_PATH: "/tmp/wishes.db",
     TURNSTILE_SECRET: "secret",
   });
-  assert.equal(config.NODE_ENV, "production");
-  assert.equal(config.HOST, "0.0.0.0");
-  assert.equal(config.PORT, 9000);
-  assert.equal(config.DATABASE_PATH, "/tmp/wishes.db");
-  assert.equal(config.TURNSTILE_SECRET, "secret");
+  expect(config.NODE_ENV).toBe("production");
+  expect(config.HOST).toBe("0.0.0.0");
+  expect(config.PORT).toBe(9000);
+  expect(config.DATABASE_PATH).toBe("/tmp/wishes.db");
+  expect(config.TURNSTILE_SECRET).toBe("secret");
 });
 
-test("required configuration is validated", () => {
-  assert.throws(() =>
+it("required configuration is validated", () => {
+  expect(() =>
     Schema.decodeUnknownSync(envSchema)({ PORT: "not-a-port" }),
-  );
-  assert.throws(() =>
+  ).toThrow();
+  expect(() =>
     Schema.decodeUnknownSync(envSchema)({ ...required, PORT: "not-a-port" }),
-  );
-  assert.throws(() =>
+  ).toThrow();
+  expect(() =>
     Schema.decodeUnknownSync(envSchema)({ ...required, NODE_ENV: "staging" }),
-  );
-  assert.throws(() =>
+  ).toThrow();
+  expect(() =>
     loadConfig({
       BETTER_AUTH_SECRET: "local-test-auth-secret-at-least-32-characters",
-      WISHLIST_SECRET_PEPPER: "local-test-secret-pepper",
     }),
-  );
-  assert.throws(() => loadConfig({ ALLOWED_ORIGIN: "https://example.com" }));
-  assert.throws(() =>
-    loadConfig({
-      ALLOWED_ORIGIN: "https://example.com",
-      BETTER_AUTH_SECRET: "local-test-auth-secret-at-least-32-characters",
-    }),
-  );
+  ).toThrow();
+  expect(() => loadConfig({ ALLOWED_ORIGIN: "https://example.com" })).toThrow();
+  expect(() => loadConfig(required)).not.toThrow();
 });
 
-test("production requires a Turnstile secret", () => {
-  assert.throws(
-    () => loadConfig({ ...required, NODE_ENV: "production" }),
+it("proxy trust is opt-in", () => {
+  expect(loadConfig(required).TRUST_PROXY).toBe(false);
+  expect(loadConfig({ ...required, TRUST_PROXY: "true" }).TRUST_PROXY).toBe(
+    true,
+  );
+  expect(() => loadConfig({ ...required, TRUST_PROXY: "yes" })).toThrow();
+});
+
+it("production requires a Turnstile secret", () => {
+  expect(() => loadConfig({ ...required, NODE_ENV: "production" })).toThrow(
     /TURNSTILE_SECRET is required in production/,
   );
 });

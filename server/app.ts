@@ -11,7 +11,7 @@ import { HttpError, respond } from "./http.ts";
 import { logger } from "./logger.ts";
 import { createRateLimiter } from "./rate-limit.ts";
 import { verifyTurnstile } from "./turnstile.ts";
-import { normalizeUserSecret, validUserSecret } from "./user-secrets.ts";
+import { validUserSecret } from "./user-secrets.ts";
 import { sessionInputSchema, wishInputSchema } from "./validation.ts";
 import { createWishlistRepository } from "./wishes/repository.ts";
 import { createWishlistService } from "./wishes/service.ts";
@@ -19,7 +19,6 @@ import { createWishlistService } from "./wishes/service.ts";
 export interface AppOptions {
   allowedOrigin: string;
   authSecret: string;
-  secretPepper: string;
   nodeEnv?: "development" | "production" | "test";
   turnstileSecret?: string | undefined;
   turnstileHostname?: string;
@@ -27,7 +26,7 @@ export interface AppOptions {
   assumeRateLimit?: number;
   globalAssumeRateLimit?: number;
   rateWindowMs?: number;
-  now?: () => number;
+  trustProxy?: boolean;
 }
 
 const serviceCall = <A>(try_: () => Promise<A>) =>
@@ -42,12 +41,16 @@ const serviceCall = <A>(try_: () => Promise<A>) =>
           }),
   });
 
+const bearerToken = (header: string | undefined) => {
+  const match = /^Bearer\s+(\S+)$/i.exec(header ?? "");
+  return match?.[1];
+};
+
 export function createApp(
   db: WishlistDatabase,
   {
     allowedOrigin,
     authSecret,
-    secretPepper,
     nodeEnv = "development",
     turnstileSecret,
     turnstileHostname = new URL(allowedOrigin).hostname,
@@ -55,40 +58,45 @@ export function createApp(
     assumeRateLimit = 10,
     globalAssumeRateLimit = 30,
     rateWindowMs = 10 * 60 * 1000,
-    now,
+    trustProxy = false,
   }: AppOptions,
 ) {
   const addLimiter = createRateLimiter({
     limit: rateLimit,
     windowMs: rateWindowMs,
-    now,
   });
   const deleteLimiter = createRateLimiter({
     limit: rateLimit,
     windowMs: rateWindowMs,
-    now,
   });
   const assumeLimiter = createRateLimiter({
     limit: assumeRateLimit,
     windowMs: rateWindowMs,
-    now,
   });
   const globalAssumeLimiter = createRateLimiter({
     limit: globalAssumeRateLimit,
     windowMs: rateWindowMs,
-    now,
   });
   const auth = createAuth(db, authSecret, allowedOrigin);
-  const service = createWishlistService(
-    createWishlistRepository(db),
-    auth,
-    secretPepper,
-  );
+  const service = createWishlistService(createWishlistRepository(db), auth);
   const localOrigins = new Set([
     "http://localhost:4321",
     "http://127.0.0.1:4321",
   ]);
   const app = new Hono();
+
+  // Client IP is only read from proxy headers when the API sits behind the
+  // trusted tunnel (TRUST_PROXY=true). Otherwise every request shares "direct".
+  const clientIp = (c: {
+    req: { header: (name: string) => string | undefined };
+  }) => {
+    if (!trustProxy) return "direct";
+    return (
+      c.req.header("CF-Connecting-IP") ??
+      c.req.header("X-Forwarded-For")?.split(",")[0]?.trim() ??
+      "direct"
+    );
+  };
 
   app.onError((_error, c) => c.json({ error: "Internal server error." }, 500));
   app.notFound((c) => c.json({ error: "Not found." }, 404));
@@ -121,7 +129,7 @@ export function createApp(
           ? origin
           : "",
       allowMethods: ["GET", "POST", "DELETE", "OPTIONS"],
-      allowHeaders: ["Content-Type", "X-Wishlist-Secret", "X-Request-Id"],
+      allowHeaders: ["Content-Type", "Authorization", "X-Request-Id"],
       maxAge: 86400,
     }),
   );
@@ -191,16 +199,14 @@ export function createApp(
   });
 
   app.post("/api/wishes", async (c) => {
-    const ip = requestIp(
-      c.req.header("CF-Connecting-IP"),
-      c.req.header("X-Forwarded-For"),
-    );
+    const ip = clientIp(c);
     if (
       !addLimiter.take(`add:${ip}`) ||
       !globalAssumeLimiter.take("assume:global")
     ) {
       return c.json({ error: "Too many wishes. Please try again later." }, 429);
     }
+    const sessionToken = bearerToken(c.req.header("Authorization"));
     const program = pipe(
       jsonBody(c.req.json()),
       Effect.flatMap((body) =>
@@ -225,7 +231,9 @@ export function createApp(
                   )
                 : Effect.void,
               Effect.flatMap(() =>
-                serviceCall(() => service.createWish(input)),
+                serviceCall(() =>
+                  service.createWish({ ...input, sessionToken }),
+                ),
               ),
             ),
           ),
@@ -236,10 +244,7 @@ export function createApp(
   });
 
   app.post("/api/session", async (c) => {
-    const ip = requestIp(
-      c.req.header("CF-Connecting-IP"),
-      c.req.header("X-Forwarded-For"),
-    );
+    const ip = clientIp(c);
     if (
       !assumeLimiter.take(`assume:${ip}`) ||
       !globalAssumeLimiter.take("assume:global")
@@ -258,7 +263,7 @@ export function createApp(
             () =>
               new HttpError({
                 status: 400,
-                message: "A user secret is required.",
+                message: "A name and user secret are required.",
               }),
           ),
           Effect.flatMap((input) =>
@@ -272,7 +277,7 @@ export function createApp(
                   )
                 : Effect.void,
               Effect.flatMap(() =>
-                serviceCall(() => service.assume(input.secret)),
+                serviceCall(() => service.assume(input.name, input.secret)),
               ),
             ),
           ),
@@ -283,10 +288,7 @@ export function createApp(
   });
 
   app.post("/api/session/rotate", async (c) => {
-    const ip = requestIp(
-      c.req.header("CF-Connecting-IP"),
-      c.req.header("X-Forwarded-For"),
-    );
+    const ip = clientIp(c);
     if (
       !assumeLimiter.take(`assume:${ip}`) ||
       !globalAssumeLimiter.take("assume:global")
@@ -296,21 +298,36 @@ export function createApp(
         429,
       );
     }
-    const secret = c.req.header("X-Wishlist-Secret");
-    if (!secret || !validUserSecret(secret)) {
+    const sessionToken = bearerToken(c.req.header("Authorization"));
+    const body: unknown = await c.req.json().catch(() => undefined);
+    if (!isJsonObject(body)) {
+      return c.json({ error: "Send a valid JSON body." }, 400);
+    }
+    const currentSecret =
+      typeof body.currentSecret === "string" ? body.currentSecret : "";
+    if (!sessionToken || !validUserSecret(currentSecret)) {
       return c.json({ error: "A valid user secret is required." }, 401);
     }
-    return respond(
-      c,
-      serviceCall(() => service.rotate(secret)),
+    const turnstileToken =
+      typeof body.turnstileToken === "string" ? body.turnstileToken : "";
+    const program = pipe(
+      turnstileSecret
+        ? verifyTurnstile(
+            turnstileToken,
+            ip,
+            turnstileSecret,
+            turnstileHostname,
+          )
+        : Effect.void,
+      Effect.flatMap(() =>
+        serviceCall(() => service.rotate({ sessionToken, currentSecret })),
+      ),
     );
+    return respond(c, program);
   });
 
   app.delete("/api/wishes/:id", async (c) => {
-    const ip = requestIp(
-      c.req.header("CF-Connecting-IP"),
-      c.req.header("X-Forwarded-For"),
-    );
+    const ip = clientIp(c);
     if (
       !deleteLimiter.take(`delete:${ip}`) ||
       !globalAssumeLimiter.take("assume:global")
@@ -320,13 +337,13 @@ export function createApp(
         429,
       );
     }
-    const secret = c.req.header("X-Wishlist-Secret");
-    if (!secret || !validUserSecret(normalizeUserSecret(secret))) {
-      return c.json({ error: "A valid user secret is required." }, 401);
+    const sessionToken = bearerToken(c.req.header("Authorization"));
+    if (!sessionToken) {
+      return c.json({ error: "Use your secret to manage wishes." }, 401);
     }
     return respond(
       c,
-      serviceCall(() => service.remove(c.req.param("id"), secret)),
+      serviceCall(() => service.remove(c.req.param("id"), sessionToken)),
     );
   });
 
@@ -341,9 +358,5 @@ function jsonBody(input: Promise<unknown>) {
   });
 }
 
-function requestIp(
-  cloudflareIp: string | undefined,
-  forwarded: string | undefined,
-) {
-  return cloudflareIp ?? forwarded?.split(",")[0]?.trim() ?? "local";
-}
+const isJsonObject = (value: unknown): value is Record<string, unknown> =>
+  typeof value === "object" && value !== null && !Array.isArray(value);

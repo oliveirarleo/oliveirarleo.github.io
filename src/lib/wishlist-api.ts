@@ -17,13 +17,40 @@ export interface CreateWishInput {
   name: string;
   link: string;
   turnstileToken: string;
-  secret?: string;
 }
 
-export interface CreateWishResponse {
+interface CreateWishResponse {
   wish: Wish;
   user: WishlistUser;
+  /** Returned once, when a new name is registered, with its session. */
   secret?: string;
+  sessionToken?: string;
+}
+
+interface AssumeResponse {
+  user: WishlistUser;
+  sessionToken: string;
+}
+
+interface RotateResponse {
+  user: WishlistUser;
+  secret: string;
+  sessionToken: string;
+}
+
+/** A failed API call. Keeps the HTTP status so a rejected session can be told apart. */
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(message: string, status: number) {
+    super(message);
+    this.status = status;
+  }
+}
+
+/** True when the server rejected the bearer session, so the stored token is dead. */
+export function isSessionRejection(error: unknown) {
+  return error instanceof ApiError && error.status === 401;
 }
 
 export function createWishlistApi(baseUrl: string) {
@@ -44,8 +71,9 @@ export function createWishlistApi(baseUrl: string) {
         error?: string;
       };
       if (!response.ok)
-        throw new Error(
+        throw new ApiError(
           payload.error ?? "Something went wrong. Please try again.",
+          response.status,
         );
       return payload;
     } catch (error) {
@@ -63,34 +91,47 @@ export function createWishlistApi(baseUrl: string) {
   const json = (
     method: string,
     body: unknown,
-    secret?: string,
+    sessionToken?: string,
   ): RequestInit => ({
     method,
     headers: {
       "Content-Type": "application/json",
-      ...(secret ? { "X-Wishlist-Secret": secret } : {}),
+      ...(sessionToken ? { Authorization: `Bearer ${sessionToken}` } : {}),
     },
     ...(body === undefined ? {} : { body: JSON.stringify(body) }),
   });
 
   return {
     list: () => request<{ wishes: Wish[] }>("/api/wishes"),
-    create: (input: CreateWishInput) =>
-      request<CreateWishResponse>("/api/wishes", json("POST", input)),
-    assume: (secret: string, turnstileToken: string) =>
-      request<{ user: WishlistUser }>(
+    create: (input: CreateWishInput & { sessionToken?: string }) => {
+      const { sessionToken, ...body } = input;
+      return request<CreateWishResponse>(
+        "/api/wishes",
+        json("POST", body, sessionToken),
+      );
+    },
+    assume: (name: string, secret: string, turnstileToken: string) =>
+      request<AssumeResponse>(
         "/api/session",
-        json("POST", { secret, turnstileToken }),
+        json("POST", { name, secret, turnstileToken }),
       ),
-    remove: (wish: Wish, secret: string) =>
+    remove: (wish: Wish, sessionToken: string) =>
       request<{ ok: true }>(
         `/api/wishes/${encodeURIComponent(wish.id)}`,
-        json("DELETE", undefined, secret),
+        json("DELETE", undefined, sessionToken),
       ),
-    rotate: (secret: string) =>
-      request<{ user: WishlistUser; secret: string }>(
+    rotate: ({
+      sessionToken,
+      currentSecret,
+      turnstileToken,
+    }: {
+      sessionToken: string;
+      currentSecret: string;
+      turnstileToken: string;
+    }) =>
+      request<RotateResponse>(
         "/api/session/rotate",
-        json("POST", {}, secret),
+        json("POST", { currentSecret, turnstileToken }, sessionToken),
       ),
   };
 }

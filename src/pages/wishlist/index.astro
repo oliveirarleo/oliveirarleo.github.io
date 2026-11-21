@@ -4,8 +4,8 @@ import {
   PUBLIC_WISHLIST_API_URL,
 } from "astro:env/client";
 import Wishlist from "../../components/Wishlist";
+import "../../styles/ui.css";
 import "../../styles/global.css";
-import "../../styles/wishlist.css";
 ---
 
 <!doctype html>
@@ -29,34 +29,44 @@ import "../../styles/wishlist.css";
     <link rel="canonical" href="https://oliveirarleo.com/wishlist/" />
     <title>Christmas Wishlist · Oliveira R. Leo</title>
   </head>
-  <body class="wishlist-page">
-    <div class="page-shell">
-      <header class="site-header">
-        <a class="brand" href="/wishlist/" aria-label="Christmas Wishlist home">
-          <span class="brand-mark" aria-hidden="true">
-            <svg viewBox="0 0 32 32" fill="none">
+  <body
+    class="bg-[#faf8f2] bg-none text-[17px] leading-[1.6] text-[#36403a] [--accent:176,55,48] [--background:250,248,242] [--foreground:31,57,48] [--gray:103,112,103] [--gray-light:235,231,220] [--gray-dark:54,64,58]"
+  >
+    <div
+      class="paper-grain pointer-events-none fixed inset-0 z-0 opacity-[0.18]"
+      aria-hidden="true"
+    ></div>
+    <div class="relative z-[1] mx-auto w-[min(1120px,calc(100%_-_64px))] max-[720px]:w-[min(100%_-_32px,580px)]">
+      <header class="flex h-[104px] items-center justify-between border-b border-[#dfded4] max-[720px]:h-[82px]">
+        <a
+          class="inline-flex items-center gap-[11px] text-[25px] font-bold tracking-[-0.7px] text-[#173f35] no-underline"
+          href="/wishlist/"
+          aria-label="Christmas Wishlist home"
+        >
+          <span class="grid size-[39px] place-items-center rounded-full bg-[#b03730] text-[#fffaf1]" aria-hidden="true">
+            <svg class="size-[25px]" viewBox="0 0 32 32" fill="none">
               <path d="M5 13h22v15H5zM3 9h26v6H3zM16 9v19" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
               <path d="M16 9c-3.5 0-7-1.3-7-4 0-1.5 1.2-2.5 2.7-2.5C14.5 2.5 16 9 16 9Zm0 0c3.5 0 7-1.3 7-4 0-1.5-1.2-2.5-2.7-2.5C17.5 2.5 16 9 16 9Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
             </svg>
           </span>
-          <span>wishlist<span class="brand-dot">.</span></span>
+          <span>wishlist<span class="text-[#b03730]">.</span></span>
         </a>
-        <div class="season-label">
-          <span class="season-star" aria-hidden="true">✦</span>
+        <div class="flex items-center gap-[10px] text-[13px] font-[550] tracking-[1.2px] text-[#68736b] uppercase max-[720px]:text-[9px] max-[720px]:tracking-[0.7px] max-[430px]:max-w-[85px] max-[430px]:text-right max-[430px]:leading-[1.5]">
+          <span class="text-[19px] text-[#b88a3e]" aria-hidden="true">✦</span>
           The season of giving
         </div>
       </header>
 
-      <main>
-        <section class="hero" aria-labelledby="page-title">
-          <div class="eyebrow"><span></span> Christmas wishes, all in one place <span></span></div>
-          <h1 id="page-title">A little wish.<br /><em>A lot of joy.</em></h1>
-          <p>
+      <main class="w-full max-w-none m-0 p-0">
+        <section class="pt-[70px] pb-[65px] text-center max-[720px]:pt-[50px] max-[720px]:pb-[63px]" aria-labelledby="page-title">
+          <div class="mb-[21px] flex items-center justify-center gap-[13px] text-[11px] font-[650] tracking-[2.1px] text-[#9a762f] uppercase max-[430px]:text-[9px] max-[430px]:tracking-[1.3px]"><span class="h-px w-[26px] bg-[#c9b78e] max-[430px]:w-[14px]"></span> Christmas wishes, all in one place <span class="h-px w-[26px] bg-[#c9b78e] max-[430px]:w-[14px]"></span></div>
+          <h1 id="page-title" class="m-0 font-display text-[clamp(52px,6.2vw,76px)] leading-[1.02] tracking-[-2.8px] text-[#173f35] max-[720px]:text-[clamp(47px,13vw,65px)] max-[720px]:tracking-[-2px]">A little wish.<br /><em class="font-normal text-[#b03730]">A lot of joy.</em></h1>
+          <p class="mx-auto mt-[25px] mb-0 max-w-[530px] text-[16px] leading-[1.7] text-[#6b736d] max-[720px]:text-[15px]">
             Share what would make your Christmas merry and find the perfect gift
             for the people you love.
           </p>
-          <div class="hero-flourish" aria-hidden="true">
-            <span></span><svg viewBox="0 0 24 24" fill="none"><path d="m12 2 2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2L12 2Z" stroke="currentColor" stroke-width="1.2" /></svg><span></span>
+          <div class="mt-[28px] flex items-center justify-center gap-[12px] text-[#b88a3e]" aria-hidden="true">
+            <span class="h-px w-[38px] bg-[#ded8c8]"></span><svg class="size-[17px]" viewBox="0 0 24 24" fill="none"><path d="m12 2 2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2L12 2Z" stroke="currentColor" stroke-width="1.2" /></svg><span class="h-px w-[38px] bg-[#ded8c8]"></span>
           </div>
         </section>
 
@@ -66,15 +76,15 @@ import "../../styles/wishlist.css";
           turnstileSiteKey={PUBLIC_TURNSTILE_SITE_KEY}
         />
         <noscript>
-          <p class="list-status error">
+          <div class="alert alert-error mx-auto mt-6 max-w-md text-sm">
             Enable JavaScript to view the wishlist and add your wish.
-          </p>
+          </div>
         </noscript>
       </main>
 
-      <footer>
+      <footer class="flex min-h-[85px] items-center justify-center gap-[15px] border-t border-[#e3e0d6] text-[10px] tracking-[0.3px] text-[#8a8e85] max-[430px]:flex-col max-[430px]:gap-px max-[430px]:py-5">
         <span>Made with a little Christmas magic</span>
-        <span class="footer-star" aria-hidden="true">✦</span>
+        <span class="text-[12px] text-[#b88a3e] max-[430px]:hidden" aria-hidden="true">✦</span>
         <span>Give joy, not just gifts.</span>
       </footer>
     </div>

@@ -2,6 +2,7 @@ import { createEffect, createMemo, createSignal, For } from "solid-js";
 import type { Wish } from "../../lib/wishlist-api";
 import type { WishGroup } from "./AuthorCard";
 import AuthorCard from "./AuthorCard";
+import DialogClose from "./DialogClose";
 
 export default function WishlistList(props: {
   wishes: Wish[];
@@ -43,13 +44,14 @@ export default function WishlistList(props: {
 
   return (
     <>
-      <div class="wishlist">
+      <div class="grid gap-[17px]">
         <For each={groups()}>
-          {(group) => (
+          {(group, index) => (
             <AuthorCard
               group={group}
               activeUserId={props.activeUserId}
               removingId={removingId()}
+              alternate={index() % 2 === 1}
               onRemove={(wish) => setPending(wish)}
             />
           )}
@@ -57,7 +59,7 @@ export default function WishlistList(props: {
       </div>
       <dialog
         ref={dialog}
-        class="confirm-dialog"
+        class="modal"
         aria-labelledby="confirm-title"
         onCancel={(event) => {
           event.preventDefault();
@@ -65,25 +67,35 @@ export default function WishlistList(props: {
         }}
         onClose={() => setPending(null)}
       >
-        <h3 id="confirm-title">Remove this wish?</h3>
-        <p>Remove “{pending()?.name}” from the wishlist?</p>
-        <div class="dialog-actions">
-          <button
-            type="button"
-            class="secondary-button"
+        <div class="modal-box relative max-w-sm">
+          <DialogClose
+            label="Close remove dialog"
             disabled={Boolean(removingId())}
-            onClick={() => dialog?.close()}
-          >
-            Keep wish
-          </button>
-          <button
-            type="button"
-            class="danger-button"
-            disabled={Boolean(removingId())}
-            onClick={() => void confirmRemove()}
-          >
-            {removingId() ? "Removing…" : "Remove wish"}
-          </button>
+          />
+          <h3 id="confirm-title" class="font-display m-0 pr-10 text-xl">
+            Remove this wish?
+          </h3>
+          <p class="mt-2 text-sm text-base-content/70">
+            Remove “{pending()?.name}” from the wishlist?
+          </p>
+          <div class="modal-action">
+            <button
+              type="button"
+              class="btn btn-ghost"
+              disabled={Boolean(removingId())}
+              onClick={() => dialog?.close()}
+            >
+              Keep wish
+            </button>
+            <button
+              type="button"
+              class="btn btn-error"
+              disabled={Boolean(removingId())}
+              onClick={() => void confirmRemove()}
+            >
+              {removingId() ? "Removing…" : "Remove wish"}
+            </button>
+          </div>
         </div>
       </dialog>
     </>

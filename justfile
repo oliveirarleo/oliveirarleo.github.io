@@ -41,10 +41,10 @@ web:
 api:
     pnpm dev:api
 
-# Type-check Astro and test the API
+# Type-check Astro and run all tests
 check:
     pnpm exec astro check
-    pnpm test:api
+    pnpm test
 
 # Alias for check
 test: check
@@ -52,6 +52,14 @@ test: check
 # Generate a new Drizzle migration after changing server/schema.ts
 migrations:
     pnpm exec drizzle-kit generate
+
+# Fill the local development database with demo authors and wishes
+seed:
+    node --env-file-if-exists=.env --env-file-if-exists=.dev.env scripts/seed-dev.ts
+
+# Remove all wishes and authors from the local development database
+clean:
+    node --env-file-if-exists=.env --env-file-if-exists=.dev.env scripts/clean-dev.ts
 
 # Build the static site
 build:

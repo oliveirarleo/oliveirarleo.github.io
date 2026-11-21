@@ -1,6 +1,8 @@
 import { createMemo, createSignal, onCleanup, onMount } from "solid-js";
 import type { StoredUser, UserSecretStore } from "../../lib/user-secrets";
 import {
+  clearSession,
+  forgetUser,
   normalizeUserSecret,
   readUserSecrets,
   syncUserSecrets,
@@ -11,7 +13,11 @@ import type {
   Wish,
   WishlistUser,
 } from "../../lib/wishlist-api";
-import { createWishlistApi } from "../../lib/wishlist-api";
+import { createWishlistApi, isSessionRejection } from "../../lib/wishlist-api";
+
+const POLL_INTERVAL_MS = 30_000;
+const SESSION_ENDED_MESSAGE =
+  "Your session has ended. Enter your user secret again to keep managing your wishes.";
 
 function errorMessage(error: unknown, fallback: string) {
   return error instanceof Error ? error.message : fallback;
@@ -49,17 +55,49 @@ export function useWishlist(apiUrl: string) {
     writeUserSecrets(next);
   }
 
-  function remember(user: WishlistUser, secret: string) {
+  /**
+   * Reports a failed call. A rejected session (401) clears that session token
+   * but keeps the secret, so the owner can enter it again from "Code".
+   * Pass `clearOn401: false` when a 401 means a wrong secret, not a dead
+   * session (rotation).
+   */
+  function reportFailure(
+    user: StoredUser | null,
+    error: unknown,
+    fallback: string,
+    clearOn401 = true,
+  ) {
+    if (user && clearOn401 && isSessionRejection(error)) {
+      updateStore(clearSession(store(), user.id));
+      report(SESSION_ENDED_MESSAGE, true);
+      return;
+    }
+    report(errorMessage(error, fallback), true);
+  }
+
+  /** Returns the user's session token, or prompts to sign in again when it is gone. */
+  function sessionTokenFor(user: StoredUser): string | null {
+    if (user.sessionToken) return user.sessionToken;
+    report(SESSION_ENDED_MESSAGE, true);
+    return null;
+  }
+
+  function remember(
+    user: WishlistUser,
+    secret: string,
+    sessionToken: string | null,
+  ) {
     const current = store();
     updateStore({
       activeUserId: user.id,
       users: {
         ...current.users,
-        [user.id]: { ...user, secret: normalizeUserSecret(secret) },
+        [user.id]: { ...user, secret, sessionToken },
       },
     });
   }
 
+  /** Single refresh path for mount, manual, visibility and polling. */
   async function loadWishes(quiet = false) {
     if (loading) return;
     loading = true;
@@ -81,17 +119,19 @@ export function useWishlist(apiUrl: string) {
     }
   }
 
-  async function createWish(input: Omit<CreateWishInput, "secret">) {
+  async function createWish(input: CreateWishInput) {
+    const active = activeUser();
+    const activeToken = active ? sessionTokenFor(active) : null;
+    if (active && !activeToken) return false;
     try {
-      const secret = activeUser()?.secret;
       const result = await api.create({
         ...input,
-        ...(secret ? { secret } : {}),
+        ...(activeToken ? { sessionToken: activeToken } : {}),
       });
       setWishes((current) => [...current, result.wish]);
       setLoaded(true);
       if (result.secret) {
-        remember(result.user, result.secret);
+        remember(result.user, result.secret, result.sessionToken ?? null);
         report(
           "Wish added. Your user secret is ready — select Code to view it.",
         );
@@ -100,16 +140,15 @@ export function useWishlist(apiUrl: string) {
       }
       return true;
     } catch (error) {
-      report(errorMessage(error, "Could not add your wish."), true);
+      reportFailure(active, error, "Could not add your wish.");
       return false;
     }
   }
 
-  async function assume(secret: string, turnstileToken: string) {
+  async function assume(name: string, secret: string, turnstileToken: string) {
     try {
-      const normalized = normalizeUserSecret(secret);
-      const result = await api.assume(normalized, turnstileToken);
-      remember(result.user, normalized);
+      const result = await api.assume(name, secret, turnstileToken);
+      remember(result.user, normalizeUserSecret(secret), result.sessionToken);
       report(`You are now managing ${result.user.name}’s wishes.`);
       return true;
     } catch (error) {
@@ -121,27 +160,36 @@ export function useWishlist(apiUrl: string) {
   async function remove(wish: Wish) {
     const user = activeUser();
     if (!user || wish.userId !== user.id) return false;
+    const sessionToken = sessionTokenFor(user);
+    if (!sessionToken) return false;
     try {
-      await api.remove(wish, user.secret);
+      await api.remove(wish, sessionToken);
       setWishes((current) => current.filter((item) => item.id !== wish.id));
       report("Wish removed.");
       return true;
     } catch (error) {
-      report(errorMessage(error, "Could not remove your wish."), true);
+      reportFailure(user, error, "Could not remove your wish.");
       return false;
     }
   }
 
-  async function rotate() {
+  async function rotate(turnstileToken: string) {
     const user = activeUser();
     if (!user) return false;
+    const sessionToken = sessionTokenFor(user);
+    if (!sessionToken) return false;
     try {
-      const result = await api.rotate(user.secret);
-      remember(result.user, result.secret);
+      const result = await api.rotate({
+        sessionToken,
+        currentSecret: user.secret,
+        turnstileToken,
+      });
+      remember(result.user, result.secret, result.sessionToken);
       report("Secret rotated. Select Code to view the new secret.");
       return true;
     } catch (error) {
-      report(errorMessage(error, "Could not rotate the secret."), true);
+      // A 401 here means the current secret was wrong, not a dead session.
+      reportFailure(user, error, "Could not rotate the secret.", false);
       return false;
     }
   }
@@ -159,12 +207,9 @@ export function useWishlist(apiUrl: string) {
   }
 
   function forget() {
-    const current = store();
     const user = activeUser();
     if (!user) return;
-    const users = { ...current.users };
-    delete users[user.id];
-    updateStore({ users, activeUserId: null });
+    updateStore(forgetUser(store(), user.id));
     report("This device has forgotten that user secret.");
   }
 
@@ -180,7 +225,7 @@ export function useWishlist(apiUrl: string) {
     };
     const polling = window.setInterval(() => {
       if (!document.hidden) void loadWishes(true);
-    }, 30_000);
+    }, POLL_INTERVAL_MS);
     window.addEventListener("storage", onStorage);
     document.addEventListener("visibilitychange", onVisibility);
     onCleanup(() => {
@@ -198,7 +243,9 @@ export function useWishlist(apiUrl: string) {
     status,
     statusHasError,
     activeUser,
-    knownUsers: createMemo(() => Object.values(store().users)),
+    knownUsers: createMemo(() =>
+      Object.values(store().users).filter((user) => user.sessionToken),
+    ),
     report,
     refresh: () => loadWishes(),
     createWish,

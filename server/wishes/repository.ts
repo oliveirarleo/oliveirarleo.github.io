@@ -1,14 +1,16 @@
 import { randomUUID } from "node:crypto";
-import { asc, eq, sql } from "drizzle-orm";
+import { asc, count, eq, sql } from "drizzle-orm";
 import type { WishlistDatabase } from "../database.ts";
-import { users, wishes, wishlistSecrets } from "../schema.ts";
+import { users, wishes } from "../schema.ts";
+
+export const WISH_LIMIT = 100;
 
 export interface PublicUser {
   id: string;
   name: string;
 }
 
-export interface PublicWish {
+interface PublicWish {
   id: string;
   userId: string;
   author: string;
@@ -17,93 +19,74 @@ export interface PublicWish {
   createdAt: string;
 }
 
+export class WishLimitReached extends Error {}
+
+/** The display name, falling back to the stored name. Shared by wishes and users. */
+export function displayName(user: {
+  name: string;
+  displayUsername?: string | null;
+}) {
+  return user.displayUsername ?? user.name;
+}
+
 export function createWishlistRepository(db: WishlistDatabase) {
   const publicWish = {
     id: wishes.id,
     userId: wishes.userId,
-    author: users.name,
     name: wishes.name,
     link: wishes.link,
     createdAt: wishes.createdAt,
+    displayUsername: users.displayUsername,
+    storedName: users.name,
   };
 
   return {
     async listWishes(limit: number, offset: number): Promise<PublicWish[]> {
-      return db
+      const rows = await db
         .select(publicWish)
         .from(wishes)
         .innerJoin(users, eq(wishes.userId, users.id))
-        .orderBy(asc(wishes.createdAt))
+        .orderBy(asc(wishes.createdAt), asc(wishes.id))
         .limit(limit)
         .offset(offset);
+      return rows.map(({ displayUsername, storedName, ...wish }) => ({
+        ...wish,
+        author: displayName({ name: storedName, displayUsername }),
+      }));
     },
 
-    async findUserByName(nameKey: string) {
+    async findUserByUsername(username: string) {
       const [user] = await db
         .select()
         .from(users)
-        .where(eq(users.nameKey, nameKey))
+        .where(eq(users.username, username))
         .limit(1);
       return user;
-    },
-
-    async findUserById(id: string) {
-      const [user] = await db
-        .select()
-        .from(users)
-        .where(eq(users.id, id))
-        .limit(1);
-      return user;
-    },
-
-    async setNameKey(userId: string, nameKey: string) {
-      await db.update(users).set({ nameKey }).where(eq(users.id, userId));
     },
 
     async deleteUser(userId: string) {
       await db.delete(users).where(eq(users.id, userId));
     },
 
-    async createSecret(credentials: {
-      userId: string;
-      lookup: string;
-      hash: string;
-      salt: string;
-    }) {
-      const id = randomUUID();
-      await db.insert(wishlistSecrets).values({
-        id,
-        userId: credentials.userId,
-        secretLookup: credentials.lookup,
-        secretHash: credentials.hash,
-        secretSalt: credentials.salt,
-        createdAt: new Date().toISOString(),
-      });
-      return id;
-    },
-
-    async findSecretByLookup(lookup: string) {
-      const [secret] = await db
-        .select()
-        .from(wishlistSecrets)
-        .where(eq(wishlistSecrets.secretLookup, lookup))
-        .limit(1);
-      return secret;
-    },
-
-    async deleteSecret(id: string) {
-      await db.delete(wishlistSecrets).where(eq(wishlistSecrets.id, id));
-    },
-
-    async addWish(
+    /**
+     * Inserts a wish only while the list is under WISH_LIMIT. The count and
+     * insert run in one transaction so concurrent posts cannot exceed the cap.
+     */
+    async addWishWithinLimit(
       user: PublicUser,
       input: { name: string; link: string },
     ): Promise<PublicWish> {
       const id = randomUUID();
       const createdAt = new Date().toISOString();
-      await db
-        .insert(wishes)
-        .values({ id, userId: user.id, ...input, createdAt });
+      // node:sqlite is synchronous, so the transaction body must be too.
+      db.transaction((tx) => {
+        const total =
+          tx.select({ total: count() }).from(wishes).get()?.total ?? 0;
+        if (total >= WISH_LIMIT) throw new WishLimitReached();
+        tx.insert(wishes)
+          .values({ id, userId: user.id, ...input, createdAt })
+          .run();
+      });
       return { id, userId: user.id, author: user.name, ...input, createdAt };
     },
 

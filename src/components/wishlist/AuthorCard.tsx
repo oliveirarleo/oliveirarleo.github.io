@@ -1,4 +1,3 @@
-import { Sparkles } from "lucide-solid";
 import { For } from "solid-js";
 import type { Wish } from "../../lib/wishlist-api";
 import WishItem from "./WishItem";
@@ -13,37 +12,53 @@ export default function AuthorCard(props: {
   group: WishGroup;
   activeUserId: string | undefined;
   removingId: string | null;
+  alternate?: boolean;
   onRemove: (wish: Wish) => void;
 }) {
+  const wishCount = () => props.group.wishes.length;
+
   return (
-    <article class="author-card">
-      <header class="author-header">
-        <div class="avatar" aria-hidden="true">
+    <article class="collapse collapse-arrow overflow-hidden rounded-xl border border-[#e3e1d8] bg-white/60 shadow-[0_3px_12px_rgba(34,52,43,0.024)]">
+      <input
+        type="checkbox"
+        aria-label={`${props.group.author}: ${wishCount()} ${wishCount() === 1 ? "wish" : "wishes"}`}
+      />
+      <header class="collapse-title flex items-center gap-[13px] pt-5 pr-12 pb-[17px] pl-[23px]">
+        <div
+          class="grid size-[45px] shrink-0 place-items-center rounded-full border font-serif text-[20px]"
+          classList={{
+            "border-[#eadbd0] bg-[#f3e8df] text-[#a24b3e]": Boolean(
+              props.alternate,
+            ),
+            "border-[#d8e3d7] bg-[#e6eee6] text-[#355a4a]": !props.alternate,
+          }}
+          aria-hidden="true"
+        >
           {props.group.author.charAt(0).toLocaleUpperCase()}
         </div>
-        <div class="author-details">
-          <h3>{props.group.author}</h3>
-          <p>
-            {props.group.wishes.length}{" "}
-            {props.group.wishes.length === 1 ? "wish" : "wishes"}
+        <div class="min-w-0 flex-1">
+          <h3 class="font-display m-0 mb-px truncate text-[22px] leading-[26px] text-[#27493e]">
+            {props.group.author}
+          </h3>
+          <p class="m-0 text-[11px] leading-[18px] text-[#858980]">
+            {wishCount()} {wishCount() === 1 ? "wish" : "wishes"}
           </p>
         </div>
-        <span class="author-sparkle" aria-hidden="true">
-          <Sparkles size={20} />
-        </span>
       </header>
-      <ul class="author-wishes">
-        <For each={props.group.wishes}>
-          {(wish) => (
-            <WishItem
-              wish={wish}
-              canRemove={props.activeUserId === wish.userId}
-              removing={props.removingId === wish.id}
-              onRemove={() => props.onRemove(wish)}
-            />
-          )}
-        </For>
-      </ul>
+      <div class="collapse-content px-[23px]">
+        <ul class="m-0">
+          <For each={props.group.wishes}>
+            {(wish) => (
+              <WishItem
+                wish={wish}
+                canRemove={props.activeUserId === wish.userId}
+                removing={props.removingId === wish.id}
+                onRemove={() => props.onRemove(wish)}
+              />
+            )}
+          </For>
+        </ul>
+      </div>
     </article>
   );
 }

@@ -12,6 +12,7 @@ import {
   transformerNotationHighlight,
   transformerNotationWordHighlight,
 } from "@shikijs/transformers";
+import tailwindcss from "@tailwindcss/vite";
 import { AstroPWAIntegration } from "@vite-pwa/astro";
 import { defineConfig, envField } from "astro/config";
 import rehypeExternalLinks from "rehype-external-links";
@@ -32,6 +33,9 @@ export default defineConfig({
         optional: true,
       }),
     },
+  },
+  vite: {
+    plugins: [tailwindcss()],
   },
   integrations: [
     mdx(),

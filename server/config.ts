@@ -1,4 +1,4 @@
-import { Effect, Schema } from "effect";
+import { Effect, Schema, SchemaGetter } from "effect";
 import { logger } from "./logger.ts";
 
 const portSchema = Schema.NumberFromString.check(
@@ -21,11 +21,18 @@ export const envSchema = Schema.Struct({
   ),
   ALLOWED_ORIGIN: Schema.NonEmptyString,
   BETTER_AUTH_SECRET: Schema.String.check(Schema.isMinLength(32)),
-  WISHLIST_SECRET_PEPPER: Schema.NonEmptyString,
+  // Set only when the API sits behind the Cloudflare Tunnel so client IPs can be trusted.
+  TRUST_PROXY: Schema.Literals(["true", "false"]).pipe(
+    Schema.decodeTo(Schema.Boolean, {
+      decode: SchemaGetter.transform((value) => value === "true"),
+      encode: SchemaGetter.transform((value) => (value ? "true" : "false")),
+    }),
+    Schema.withDecodingDefaultTypeKey(Effect.succeed(false)),
+  ),
   TURNSTILE_SECRET: Schema.optional(Schema.NonEmptyString),
 });
 
-export type AppConfig = typeof envSchema.Type;
+type AppConfig = typeof envSchema.Type;
 
 export function loadConfig(env: NodeJS.ProcessEnv = process.env): AppConfig {
   let config: AppConfig;
