@@ -47,7 +47,7 @@ export default function WishItem(props: {
         </a>
         <button
           type="button"
-          class="btn btn-circle btn-ghost btn-xs shrink-0 text-[#89978d]"
+          class="btn btn-circle btn-ghost btn-xs relative shrink-0 text-[#89978d] after:absolute after:-inset-2.5 after:rounded-full after:content-['']"
           aria-expanded={optionsOpen()}
           aria-controls={optionsId()}
           aria-label={`${optionsOpen() ? "Hide" : "Show"} options for ${props.wish.name}`}
@@ -72,38 +72,41 @@ export default function WishItem(props: {
         classList={{ "collapse-open": optionsOpen() }}
       >
         <div class="collapse-content px-0">
-          <div class="flex flex-wrap items-center gap-1.5 pt-1 pb-2 pl-[39px]">
+          <div class="flex flex-wrap items-center gap-x-2 gap-y-1.5 pt-1 pb-2 pl-[39px]">
+            <div class="min-w-0">
+              <ReactionBar
+                wish={props.wish}
+                activeUserId={props.activeUserId}
+                onReact={props.onReact}
+              />
+            </div>
             <Show when={props.isOwner}>
-              <button
-                type="button"
-                class="btn btn-ghost btn-xs h-6 min-h-0 rounded-full px-2 text-[11px] text-[#68736b]"
-                onClick={() => {
-                  setOptionsOpen(false);
-                  props.onEdit();
-                }}
-              >
-                <Pencil size={13} aria-hidden="true" />
-                Edit
-              </button>
-              <button
-                type="button"
-                class="btn btn-ghost btn-xs h-6 min-h-0 rounded-full px-2 text-[11px] text-error"
-                disabled={props.removing}
-                onClick={() => {
-                  setOptionsOpen(false);
-                  props.onRemove();
-                }}
-              >
-                <Trash2 size={13} aria-hidden="true" />
-                Remove
-              </button>
-              <span class="mx-1 h-4 w-px bg-[#e3e1d8]" aria-hidden="true" />
+              <div class="ml-auto flex items-center gap-1.5">
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-xs h-6 min-h-0 rounded-full px-2 text-[11px] text-[#68736b]"
+                  onClick={() => {
+                    setOptionsOpen(false);
+                    props.onEdit();
+                  }}
+                >
+                  <Pencil size={13} aria-hidden="true" />
+                  Edit
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-xs h-6 min-h-0 rounded-full px-2 text-[11px] text-error"
+                  disabled={props.removing}
+                  onClick={() => {
+                    setOptionsOpen(false);
+                    props.onRemove();
+                  }}
+                >
+                  <Trash2 size={13} aria-hidden="true" />
+                  Remove
+                </button>
+              </div>
             </Show>
-            <ReactionBar
-              wish={props.wish}
-              activeUserId={props.activeUserId}
-              onReact={props.onReact}
-            />
           </div>
         </div>
       </div>
