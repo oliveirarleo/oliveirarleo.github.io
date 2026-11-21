@@ -1,4 +1,4 @@
-import { render, screen } from "@solidjs/testing-library";
+import { fireEvent, render, screen } from "@solidjs/testing-library";
 import { describe, expect, it } from "vitest";
 import type { Wish } from "../../lib/wishlist-api";
 import AuthorCard from "./AuthorCard";
@@ -34,28 +34,19 @@ function renderCard(
 }
 
 describe("AuthorCard", () => {
-  it("starts collapsed behind a checkbox disclosure", () => {
+  it("shows wishes directly, without a per-author disclosure", () => {
     const { container } = renderCard([wish()]);
 
-    const collapse = container.querySelector(".collapse");
-    expect(collapse).not.toBeNull();
-
-    const toggle = collapse?.querySelector<HTMLInputElement>(
-      'input[type="checkbox"]',
-    );
-    expect(toggle).not.toBeNull();
-    expect(toggle?.checked).toBe(false);
-  });
-
-  it("names the disclosure toggle after the author and their wish count", () => {
-    renderCard([wish(), wish({ id: "wish-2", name: "Warm socks" })]);
-
+    expect(container.querySelector('input[type="checkbox"]')).toBeNull();
+    expect(screen.getByRole("heading", { name: "Alice" })).not.toBeNull();
     expect(
-      screen.getByRole("checkbox", { name: "Alice: 2 wishes" }),
+      screen.getByRole("link", {
+        name: "A really good book (opens in a new tab)",
+      }),
     ).not.toBeNull();
   });
 
-  it("keeps every wish in the document while the card is collapsed", () => {
+  it("keeps every wish in the document", () => {
     renderCard([wish(), wish({ id: "wish-2", name: "Warm socks" })]);
 
     expect(
@@ -68,26 +59,54 @@ describe("AuthorCard", () => {
     ).not.toBeNull();
   });
 
-  it("shows owner controls and the reaction palette only when signed in", () => {
-    const { unmount } = renderCard([wish()]);
+  it("reveals edit, remove, and reactions from each wish's options button", () => {
+    const { container } = renderCard([wish()], "user-1");
 
-    expect(
-      screen.queryByRole("button", { name: "Edit A really good book" }),
-    ).toBeNull();
-    expect(
-      (screen.getByRole("button", { name: "Love it: ❤️" }) as HTMLButtonElement)
-        .disabled,
-    ).toBe(true);
-    unmount();
+    const toggle = screen.getByRole("button", {
+      name: "Show options for A really good book",
+    });
+    const panel = container.querySelector("#wish-options-wish-1");
 
-    renderCard([wish()], "user-1");
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    expect(panel?.classList.contains("collapse-open")).toBe(false);
+
+    fireEvent.click(toggle);
+
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
     expect(
-      screen.getByRole("button", { name: "Edit A really good book" }),
+      screen.getByRole("button", {
+        name: "Hide options for A really good book",
+      }),
     ).not.toBeNull();
+    expect(panel?.classList.contains("collapse-open")).toBe(true);
+    expect(screen.getByRole("button", { name: "Edit" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Remove" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Love it: ❤️" })).not.toBeNull();
+  });
+
+  it("only offers edit and remove to the wish's owner", () => {
+    const { unmount } = renderCard([wish()], "someone-else");
+
+    expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+    expect(screen.queryByRole("button", { name: "Remove" })).toBeNull();
     expect(
       (screen.getByRole("button", { name: "Love it: ❤️" }) as HTMLButtonElement)
         .disabled,
     ).toBe(false);
+    unmount();
+
+    renderCard([wish()], "user-1");
+    expect(screen.getByRole("button", { name: "Edit" })).not.toBeNull();
+    expect(screen.getByRole("button", { name: "Remove" })).not.toBeNull();
+  });
+
+  it("disables reactions when nobody is assumed", () => {
+    renderCard([wish()]);
+
+    expect(
+      (screen.getByRole("button", { name: "Love it: ❤️" }) as HTMLButtonElement)
+        .disabled,
+    ).toBe(true);
   });
 
   it("summarises reactions and marks the active user's own", () => {

@@ -1,5 +1,5 @@
-import { ArrowUpRight, Pencil, Trash2 } from "lucide-solid";
-import { Show } from "solid-js";
+import { ArrowUpRight, ChevronDown, Pencil, Trash2 } from "lucide-solid";
+import { createSignal, Show } from "solid-js";
 import type { Reaction } from "../../../shared/reactions";
 import type { Wish } from "../../lib/wishlist-api";
 import ReactionBar from "./ReactionBar";
@@ -14,9 +14,12 @@ export default function WishItem(props: {
   onRemove: () => void;
   onReact: (emoji: Reaction) => void;
 }) {
+  const [optionsOpen, setOptionsOpen] = createSignal(false);
+  const optionsId = () => `wish-options-${props.wish.id}`;
+
   return (
     <li class="group border-t border-[#ebe9e1] py-1.5">
-      <div class="flex items-center gap-2">
+      <div class="flex items-center gap-1">
         <a
           href={props.wish.link}
           target="_blank"
@@ -42,33 +45,68 @@ export default function WishItem(props: {
             aria-hidden="true"
           />
         </a>
-        <Show when={props.isOwner}>
-          <button
-            class="btn btn-circle btn-ghost btn-xs shrink-0 text-[#68736b]"
-            type="button"
-            title="Edit wish"
-            aria-label={`Edit ${props.wish.name}`}
-            onClick={props.onEdit}
-          >
-            <Pencil size={14} aria-hidden="true" />
-          </button>
-          <button
-            class="btn btn-circle btn-ghost btn-xs shrink-0 text-error"
-            type="button"
-            title="Remove wish"
-            aria-label={`Remove ${props.wish.name}`}
-            disabled={props.removing}
-            onClick={props.onRemove}
-          >
-            <Trash2 size={15} aria-hidden="true" />
-          </button>
-        </Show>
+        <button
+          type="button"
+          class="btn btn-circle btn-ghost btn-xs shrink-0 text-[#89978d]"
+          aria-expanded={optionsOpen()}
+          aria-controls={optionsId()}
+          aria-label={`${optionsOpen() ? "Hide" : "Show"} options for ${props.wish.name}`}
+          title={optionsOpen() ? "Hide options" : "Edit, remove, or react"}
+          onClick={() => setOptionsOpen((open) => !open)}
+        >
+          <ChevronDown
+            class={
+              optionsOpen()
+                ? "rotate-180 transition-transform"
+                : "transition-transform"
+            }
+            size={16}
+            aria-hidden="true"
+          />
+        </button>
       </div>
-      <ReactionBar
-        wish={props.wish}
-        activeUserId={props.activeUserId}
-        onReact={props.onReact}
-      />
+
+      <div
+        id={optionsId()}
+        class="collapse"
+        classList={{ "collapse-open": optionsOpen() }}
+      >
+        <div class="collapse-content px-0">
+          <div class="flex flex-wrap items-center gap-1.5 pt-1 pb-2 pl-[39px]">
+            <Show when={props.isOwner}>
+              <button
+                type="button"
+                class="btn btn-ghost btn-xs h-6 min-h-0 rounded-full px-2 text-[11px] text-[#68736b]"
+                onClick={() => {
+                  setOptionsOpen(false);
+                  props.onEdit();
+                }}
+              >
+                <Pencil size={13} aria-hidden="true" />
+                Edit
+              </button>
+              <button
+                type="button"
+                class="btn btn-ghost btn-xs h-6 min-h-0 rounded-full px-2 text-[11px] text-error"
+                disabled={props.removing}
+                onClick={() => {
+                  setOptionsOpen(false);
+                  props.onRemove();
+                }}
+              >
+                <Trash2 size={13} aria-hidden="true" />
+                Remove
+              </button>
+              <span class="mx-1 h-4 w-px bg-[#e3e1d8]" aria-hidden="true" />
+            </Show>
+            <ReactionBar
+              wish={props.wish}
+              activeUserId={props.activeUserId}
+              onReact={props.onReact}
+            />
+          </div>
+        </div>
+      </div>
     </li>
   );
 }

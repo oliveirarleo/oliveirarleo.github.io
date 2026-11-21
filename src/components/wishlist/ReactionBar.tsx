@@ -22,7 +22,7 @@ export default function ReactionBar(props: {
   });
 
   return (
-    <fieldset class="mt-1 flex min-w-0 flex-wrap items-center gap-1 border-0 p-0 pl-[39px]">
+    <fieldset class="flex min-w-0 flex-wrap items-center gap-1 border-0 p-0">
       <legend class="sr-only">Reactions to {props.wish.name}</legend>
       <For each={items()}>
         {(item) => (

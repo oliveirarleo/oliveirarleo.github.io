@@ -21,12 +21,8 @@ export default function AuthorCard(props: {
   const wishCount = () => props.group.wishes.length;
 
   return (
-    <article class="collapse collapse-arrow overflow-hidden rounded-xl border border-[#e3e1d8] bg-white/60 shadow-[0_3px_12px_rgba(34,52,43,0.024)]">
-      <input
-        type="checkbox"
-        aria-label={`${props.group.author}: ${wishCount()} ${wishCount() === 1 ? "wish" : "wishes"}`}
-      />
-      <header class="collapse-title flex items-center gap-[13px] pt-5 pr-12 pb-[17px] pl-[23px]">
+    <article class="overflow-hidden rounded-xl border border-[#e3e1d8] bg-white/60 shadow-[0_3px_12px_rgba(34,52,43,0.024)]">
+      <header class="flex items-center gap-[13px] px-[23px] py-[17px]">
         <div
           class="grid size-[45px] shrink-0 place-items-center rounded-full border font-serif text-[20px]"
           classList={{
@@ -48,23 +44,21 @@ export default function AuthorCard(props: {
           </p>
         </div>
       </header>
-      <div class="collapse-content px-[23px]">
-        <ul class="m-0">
-          <For each={props.group.wishes}>
-            {(wish) => (
-              <WishItem
-                wish={wish}
-                isOwner={props.activeUserId === wish.userId}
-                activeUserId={props.activeUserId}
-                removing={props.removingId === wish.id}
-                onEdit={() => props.onEdit(wish)}
-                onRemove={() => props.onRemove(wish)}
-                onReact={(emoji) => props.onReact(wish, emoji)}
-              />
-            )}
-          </For>
-        </ul>
-      </div>
+      <ul class="m-0 px-[23px] pb-2">
+        <For each={props.group.wishes}>
+          {(wish) => (
+            <WishItem
+              wish={wish}
+              isOwner={props.activeUserId === wish.userId}
+              activeUserId={props.activeUserId}
+              removing={props.removingId === wish.id}
+              onEdit={() => props.onEdit(wish)}
+              onRemove={() => props.onRemove(wish)}
+              onReact={(emoji) => props.onReact(wish, emoji)}
+            />
+          )}
+        </For>
+      </ul>
     </article>
   );
 }
