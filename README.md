@@ -179,6 +179,28 @@ frontend configuration.
 For GitHub Pages, the public site key is a repository variable named
 `TURNSTILE_SITE_KEY`. The build workflow passes it to Astro.
 
+## Deploying
+
+Run the wizard on the NixOS server that runs the API:
+
+```sh
+just deploy # or: ./scripts/deploy-wizard.sh
+```
+
+It stops on the first failure, and everything before the switch is read-only:
+
+1. preflight (clean `main`, commits to ship, current generation, row counts)
+2. `astro check` and the full Vitest suite
+3. a verified online SQLite snapshot in `/var/lib/wishlist/backups`
+4. `nix flake update wishlist`, then `nixos-rebuild build` (no restart)
+5. `nixos-rebuild switch`, then health, row counts, and the backup timer
+6. `git push origin main` and the GitHub Pages workflow
+
+Anything that fails after the switch restores the snapshot and the previous
+system generation (`nixos-rebuild switch --rollback`). The wizard asks before
+the switch and again before the push, so the API can be verified while the
+old site is still live.
+
 ## Deploying the API on NixOS
 
 Add the repository as a flake input in `/etc/nixos/flake.nix` and import its

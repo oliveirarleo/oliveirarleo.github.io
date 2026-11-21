@@ -46,6 +46,10 @@ check:
     pnpm exec astro check
     pnpm test
 
+# Deploy to production: checks, tests, snapshot, build, switch, verify, push
+deploy:
+    ./scripts/deploy-wizard.sh
+
 # Alias for check
 test: check
 

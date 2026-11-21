@@ -24,7 +24,3 @@ const reactionSet: ReadonlySet<string> = new Set(
 export function isReaction(value: string): value is Reaction {
   return reactionSet.has(value);
 }
-
-export function reactionLabel(emoji: Reaction) {
-  return REACTIONS.find((reaction) => reaction.emoji === emoji)?.label ?? emoji;
-}
