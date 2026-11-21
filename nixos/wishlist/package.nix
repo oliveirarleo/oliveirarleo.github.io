@@ -12,14 +12,14 @@ buildNpmPackage {
   };
 
   inherit nodejs;
-  npmDepsHash = "sha256-DgPCD98Ip7dMZ240DekBKKvHwOrEKN/4isc/ReuBn38=";
+  npmDepsHash = "sha256-XOA72DvHJlWTGuNkVAlzhSe6oVchpM9gY09YfmhaA4E=";
   npmInstallFlags = [ "--omit=dev" "--ignore-scripts" ];
   dontNpmBuild = true;
 
   installPhase = ''
     runHook preInstall
     mkdir -p $out/lib/wishlist $out/bin
-    cp -r package.json node_modules server $out/lib/wishlist/
+    cp -r package.json node_modules server shared $out/lib/wishlist/
     cat > $out/bin/wishlist-api <<EOF
     #!${nodejs}/bin/node
     import "$out/lib/wishlist/server/index.ts";
