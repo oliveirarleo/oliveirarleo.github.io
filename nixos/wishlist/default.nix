@@ -36,7 +36,7 @@ in
 
     allowedOrigin = lib.mkOption {
       type = lib.types.str;
-      default = "https://wishlist.oliveirarleo.com";
+      default = "https://oliveirarleo.com";
       description = "Exact browser origin allowed to call the API.";
     };
 

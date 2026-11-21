@@ -9,7 +9,7 @@ test("environment defaults are decoded", () => {
   assert.equal(config.HOST, "127.0.0.1");
   assert.equal(config.PORT, 8787);
   assert.equal(config.DATABASE_PATH, "./data/wishes.db");
-  assert.equal(config.ALLOWED_ORIGIN, "https://wishlist.oliveirarleo.com");
+  assert.equal(config.ALLOWED_ORIGIN, "https://oliveirarleo.com");
   assert.equal(config.TURNSTILE_SECRET, undefined);
 });
 

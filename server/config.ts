@@ -20,7 +20,7 @@ export const envSchema = Schema.Struct({
   ),
   ALLOWED_ORIGIN: Schema.NonEmptyString.pipe(
     Schema.withDecodingDefaultTypeKey(
-      Effect.succeed("https://wishlist.oliveirarleo.com"),
+      Effect.succeed("https://oliveirarleo.com"),
     ),
   ),
   TURNSTILE_SECRET: Schema.optional(Schema.NonEmptyString),

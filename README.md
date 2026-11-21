@@ -6,7 +6,7 @@ this, take a look at
 [oliveirarleo.com/tech/a-blog-in-a-day](https://oliveirarleo.com/tech/a-blog-in-a-day/).
 
 The repository also contains the shared Christmas wishlist at
-`https://wishlist.oliveirarleo.com`.
+`https://oliveirarleo.com/wishlist/`.
 
 ## Running locally
 
@@ -61,13 +61,13 @@ just migrations  # generate Drizzle migrations after editing schema.ts
 
 - **Frontend:** Astro + Solid island at `/wishlist/`, built statically and
   deployed to GitHub Pages.
+- **Public page:** `https://oliveirarleo.com/wishlist/`, deployed to GitHub
+  Pages. No Worker or separate subdomain is required.
 - **Shared API:** Hono + Effect + Drizzle on `node:sqlite`, running on the
   NixOS server. Drizzle is pinned to the 1.0 release candidate because the
   stable release does not yet ship the `node:sqlite` driver.
 - **Public API host:** `api.wishlist.oliveirarleo.com` through Cloudflare
   Tunnel.
-- **Subdomain:** a small Cloudflare Worker rewrites
-  `wishlist.oliveirarleo.com/` to the GitHub Pages `/wishlist/` page.
 - **Storage:** SQLite at `/var/lib/wishlist/wishes.db`.
 - **Migrations:** versioned SQL files in `server/migrations/`, generated with
   Drizzle Kit and applied automatically on API startup.
@@ -125,6 +125,8 @@ Cloudflare values:
 
 - `PUBLIC_TURNSTILE_SITE_KEY` — Dashboard → Turnstile → widget → Site Key
 - `TURNSTILE_SECRET` — Dashboard → Turnstile → widget → Secret Key, stored in sops
+
+The Turnstile widget must allow the `oliveirarleo.com` hostname.
 
 ### Environment variables
 
@@ -231,26 +233,3 @@ The SQLite database uses WAL mode. A simple online backup is:
 sqlite3 /var/lib/wishlist/wishes.db \
   ".backup '/var/lib/wishlist/wishes-$(date +%F).db'"
 ```
-
-## Subdomain Worker
-
-`cloudflare/wishlist-worker.ts` proxies the wishlist subdomain to the existing
-GitHub Pages site while preserving the subdomain URL.
-
-Authenticate Wrangler once:
-
-```sh
-wrangler login
-```
-
-Then deploy the Worker and its custom domain:
-
-```sh
-just deploy:worker
-```
-
-The custom domain `wishlist.oliveirarleo.com` is declared in `wrangler.jsonc`,
-so Cloudflare creates the DNS record and route automatically.
-
-The worker rewrites only `/` to `/wishlist/`. Asset requests such as
-`/_astro/*` are proxied unchanged to `oliveirarleo.com`.
