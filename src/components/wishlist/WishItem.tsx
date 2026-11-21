@@ -19,7 +19,7 @@ export default function WishItem(props: {
 
   return (
     <li class="border-t border-[#ebe9e1] py-1.5">
-      <div class="flex items-center gap-1">
+      <div class="flex items-center gap-2.5">
         <a
           href={props.wish.link}
           target="_blank"
