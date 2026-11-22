@@ -12,6 +12,9 @@ node_modules/
 # local wishlist database
 data/
 
+# local planning notes
+docs/handoff/
+
 # logs
 npm-debug.log*
 yarn-debug.log*
